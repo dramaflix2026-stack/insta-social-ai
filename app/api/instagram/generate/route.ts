@@ -16,7 +16,10 @@ export async function POST(req:Request){
     month.setUTCHours(0,0,0,0);
     const {count,error:usageError}=await db.from('usage_events').select('id',{count:'exact',head:true})
       .eq('user_id',user.id).eq('kind','image_generation').gte('created_at',month.toISOString());
-    if(usageError)throw usageError;
+    if(usageError){
+      const detail=[usageError.message,usageError.code,usageError.details,usageError.hint].filter(Boolean).join(' | ');
+      throw Error('Falha na consulta de consumo: '+(detail||'verifique a tabela usage_events e a credencial SUPABASE_SERVICE_ROLE_KEY'));
+    }
     if((count||0)>=150)throw Error('Limite mensal de 150 imagens atingido');
 
     // The paid provider is called only after authentication and quota checks.
