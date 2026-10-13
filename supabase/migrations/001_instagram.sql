@@ -1,0 +1,17 @@
+create extension if not exists pgcrypto;
+create table if not exists public.brand_profiles(id uuid primary key default gen_random_uuid(),user_id uuid not null references auth.users(id) on delete cascade,name text not null,niche text not null default '',instructions text not null default '',created_at timestamptz not null default now());
+create table if not exists public.instagram_accounts(id uuid primary key default gen_random_uuid(),user_id uuid not null references auth.users(id) on delete cascade,ig_user_id text not null,username text,access_token text not null,token_expires_at timestamptz,created_at timestamptz not null default now(),unique(user_id,ig_user_id));
+create table if not exists public.media_assets(id uuid primary key default gen_random_uuid(),user_id uuid not null references auth.users(id) on delete cascade,storage_path text not null,media_type text not null check(media_type in ('IMAGE','VIDEO')),created_at timestamptz not null default now());
+create table if not exists public.instagram_posts(id uuid primary key default gen_random_uuid(),user_id uuid not null references auth.users(id) on delete cascade,account_id uuid references public.instagram_accounts(id),asset_id uuid references public.media_assets(id),caption text not null default '',scheduled_at timestamptz not null,status text not null default 'scheduled' check(status in ('scheduled','processing','published','failed')),attempts int not null default 0,remote_id text,error text,created_at timestamptz not null default now(),published_at timestamptz);
+create table if not exists public.usage_events(id uuid primary key default gen_random_uuid(),user_id uuid not null references auth.users(id) on delete cascade,kind text not null,units int not null default 1,created_at timestamptz not null default now());
+alter table public.brand_profiles enable row level security;alter table public.instagram_accounts enable row level security;alter table public.media_assets enable row level security;alter table public.instagram_posts enable row level security;alter table public.usage_events enable row level security;
+create policy "brand owner" on public.brand_profiles for all to authenticated using(user_id=auth.uid()) with check(user_id=auth.uid());
+create policy "assets owner" on public.media_assets for all to authenticated using(user_id=auth.uid()) with check(user_id=auth.uid());
+create policy "posts owner" on public.instagram_posts for all to authenticated using(user_id=auth.uid()) with check(user_id=auth.uid());
+create policy "usage read" on public.usage_events for select to authenticated using(user_id=auth.uid());
+-- Instagram access tokens are intentionally never exposed to client sessions.
+create policy "account metadata owner" on public.instagram_accounts for select to authenticated using(user_id=auth.uid());
+insert into storage.buckets(id,name,public,file_size_limit) values('social-media','social-media',true,104857600) on conflict(id) do nothing;
+create policy "media upload" on storage.objects for insert to authenticated with check(bucket_id='social-media' and (storage.foldername(name))[1]=auth.uid()::text);
+create policy "media read owner" on storage.objects for select to authenticated using(bucket_id='social-media' and (storage.foldername(name))[1]=auth.uid()::text);
+create policy "media delete owner" on storage.objects for delete to authenticated using(bucket_id='social-media' and (storage.foldername(name))[1]=auth.uid()::text);
