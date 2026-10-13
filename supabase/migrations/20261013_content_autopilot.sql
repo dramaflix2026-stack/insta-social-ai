@@ -14,7 +14,7 @@ create table if not exists public.social_brands (
 create table if not exists public.social_plans (
  id uuid primary key default gen_random_uuid(),
  user_id uuid not null references auth.users(id) on delete cascade,
- brand_id uuid not null references public.social_brands(id) on delete cascade,
+ brand_id uuid not null references public.brand_profiles(id) on delete cascade,
  account_id uuid not null references public.instagram_accounts(id) on delete cascade,
  status text not null default 'draft' check(status in ('draft','active','paused','completed')),
  timezone text not null default 'America/Sao_Paulo',
