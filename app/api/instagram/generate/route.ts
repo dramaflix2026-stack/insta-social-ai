@@ -1,6 +1,7 @@
 import {session,admin,failure} from '@/lib/server';
 
 export async function POST(req:Request){
+  let stage='authentication';
   try {
     const {user}=await session();
     const body=await req.json();
@@ -8,6 +9,7 @@ export async function POST(req:Request){
     if(prompt.length<8)throw Error('Descreva a imagem com pelo menos 8 caracteres');
     if(!process.env.OPENAI_API_KEY)throw Error('Geração ainda não configurada pelo administrador');
 
+    stage='usage_lookup';
     const db=admin();
     const month=new Date();
     month.setUTCDate(1);
@@ -18,6 +20,7 @@ export async function POST(req:Request){
     if((count||0)>=150)throw Error('Limite mensal de 150 imagens atingido');
 
     // The paid provider is called only after authentication and quota checks.
+    stage='image_provider';
     const response=await fetch('https://api.openai.com/v1/images/generations',{
       method:'POST',
       headers:{Authorization:'Bearer '+process.env.OPENAI_API_KEY,'Content-Type':'application/json'},
@@ -30,19 +33,26 @@ export async function POST(req:Request){
     if(!encoded)throw Error('Resposta sem imagem');
     const buffer=Buffer.from(encoded,'base64');
     const path=user.id+'/'+crypto.randomUUID()+'.png';
+    stage='storage_upload';
     const {error:uploadError}=await db.storage.from('social-media').upload(path,buffer,{contentType:'image/png'});
     if(uploadError)throw uploadError;
+    stage='media_record';
     const {data:asset,error:assetError}=await db.from('media_assets')
       .insert({user_id:user.id,storage_path:path,media_type:'IMAGE'}).select().single();
     if(assetError){
       await db.storage.from('social-media').remove([path]);
       throw assetError;
     }
+    stage='usage_record';
     const {error:logError}=await db.from('usage_events').insert({user_id:user.id,kind:'image_generation',units:1});
     if(logError){
       // Never report an untracked paid generation as a success.
       throw Error('Imagem criada, mas o consumo não pôde ser registrado. Contate o suporte antes de gerar outra.');
     }
     return Response.json({asset:{...asset,url:db.storage.from('social-media').getPublicUrl(path).data.publicUrl},used:(count||0)+1,limit:150});
-  }catch(e){return failure(e)}
+  }catch(e){
+    const result=failure(e);
+    const payload=await result.json() as {error?:string;code?:string};
+    return Response.json({...payload,stage},{status:result.status});
+  }
 }
