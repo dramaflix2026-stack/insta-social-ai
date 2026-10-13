@@ -1,3 +1,17 @@
 @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700;800&display=swap');
 @tailwind base;@tailwind components;@tailwind utilities;
-:root{color-scheme:dark}body{font-family:Poppins,sans-serif;background:#101114;color:#f7f7f8}a{color:inherit}button,input{font:inherit}
+:root{color-scheme:dark}html{scroll-behavior:smooth}body{font-family:Poppins,sans-serif;background:#090a0d;color:#f7f7f8}a{color:inherit}button,input,textarea{font:inherit}button{cursor:pointer}
+@layer components{
+.primary-btn{@apply inline-flex items-center gap-3 rounded-xl bg-yellow-400 px-7 py-4 text-sm font-bold text-[#111] transition-all duration-300 hover:-translate-y-0.5 hover:bg-yellow-300 hover:shadow-[0_14px_40px_rgba(250,204,21,.18)];}
+.secondary-btn{@apply inline-flex items-center gap-3 rounded-xl border border-white/15 bg-white/[.055] px-7 py-4 text-sm font-semibold text-white transition-all duration-300 hover:border-white/30 hover:bg-white/10;}
+.section-wrap{@apply mx-auto max-w-7xl px-5 py-24 md:px-8 md:py-32;}
+.section-intro{@apply text-center;}
+.eyebrow{@apply text-[11px] font-bold uppercase tracking-[.2em] text-yellow-400;}
+.section-heading{@apply mt-5 text-[clamp(34px,4.3vw,60px)] font-extrabold leading-[1.16] tracking-[-.065em];}
+.section-sub{@apply mx-auto mt-6 max-w-[660px] text-sm leading-8 text-zinc-400 md:text-base;}
+.feature-card{@apply rounded-[24px] border border-white/[.09] bg-[#15161b] p-5 transition-all duration-300 hover:-translate-y-1 hover:border-yellow-400/30 hover:shadow-[0_25px_60px_rgba(0,0,0,.28)] md:p-6;}
+.brand-symbol{@apply flex h-10 w-10 items-center justify-center rounded-xl bg-yellow-400 text-[#111];}
+}
+.gradient-word{background:linear-gradient(115deg,#fff5b0 5%,#facc15 48%,#f59e0b 95%);-webkit-background-clip:text;background-clip:text;color:transparent}
+.dashboard-glow:before{content:'';position:absolute;inset:6% 12% -5%;z-index:-1;filter:blur(75px);background:rgba(250,204,21,.12)}
+.animate-rise{animation:rise .8s ease both}@keyframes rise{from{opacity:0;transform:translateY(18px)}to{opacity:1;transform:translateY(0)}}@media(prefers-reduced-motion:reduce){*,*:before,*:after{animation:none!important;scroll-behavior:auto!important;transition:none!important}}
