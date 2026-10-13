@@ -10,7 +10,7 @@ create policy "assets owner" on public.media_assets for all to authenticated usi
 create policy "posts owner" on public.instagram_posts for all to authenticated using(user_id=auth.uid()) with check(user_id=auth.uid());
 create policy "usage read" on public.usage_events for select to authenticated using(user_id=auth.uid());
 -- Instagram access tokens are intentionally never exposed to client sessions.
-create policy "account metadata owner" on public.instagram_accounts for select to authenticated using(user_id=auth.uid());
+revoke all on public.instagram_accounts from anon, authenticated;
 insert into storage.buckets(id,name,public,file_size_limit) values('social-media','social-media',true,104857600) on conflict(id) do nothing;
 create policy "media upload" on storage.objects for insert to authenticated with check(bucket_id='social-media' and (storage.foldername(name))[1]=auth.uid()::text);
 create policy "media read owner" on storage.objects for select to authenticated using(bucket_id='social-media' and (storage.foldername(name))[1]=auth.uid()::text);
