@@ -37,9 +37,18 @@ export function admin() {
 }
 
 export function failure(e: unknown) {
-  const message = e instanceof Error ? e.message : 'Erro inesperado';
+  // Supabase/PostgREST can reject with plain objects instead of Error instances.
+  const obj = e && typeof e === 'object' ? e as Record<string, unknown> : null;
+  const raw = e instanceof Error ? e.message : obj && typeof obj.message === 'string' ? obj.message : '';
+  const code = obj && typeof obj.code === 'string' ? obj.code : undefined;
+  const message = raw || 'Falha interna ao consultar o serviço';
+  const unauthorized = message === 'UNAUTHORIZED';
+  // Do not leak secrets, request headers, tokens, stack traces or arbitrary objects.
+  const safeMessage = unauthorized ? 'Sessão expirada' : message
+    .replace(/(sb_secret_|sb_publishable_|eyJ[A-Za-z0-9_-]{20,})[A-Za-z0-9_.-]*/g, '[credencial omitida]')
+    .slice(0, 350);
   return Response.json(
-    { error: message === 'UNAUTHORIZED' ? 'Sessão expirada' : message },
-    { status: message === 'UNAUTHORIZED' ? 401 : 400 },
+    { error: safeMessage, ...(code ? { code } : {}) },
+    { status: unauthorized ? 401 : 400 },
   );
 }
