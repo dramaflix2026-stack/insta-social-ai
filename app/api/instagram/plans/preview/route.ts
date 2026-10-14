@@ -19,7 +19,7 @@ if(!claim)throw Error('A geração já foi iniciada');
 let imageGenerated=false;
 try{
 stage='image_provider';
-const prompt=['Crie uma arte de Instagram quadrada, original e de alta qualidade.','Marca: '+brand.name,'Segmento: '+brand.niche,'Identidade visual: '+brand.instructions,'Assunto: '+item.topic,'Direção de arte: '+item.image_prompt,'Se houver imagem de referência, use-a apenas como referência de estilo, cores e composição; crie um novo post, não copie literalmente. Evite depoimentos, ofertas ou dados não confirmados.'].join('\n').slice(0,5000);
+const prompt=['Crie uma arte de Instagram quadrada, original e de alta qualidade.','Marca: '+brand.name,'Segmento: '+brand.niche,'Identidade visual: '+brand.instructions,'Assunto: '+item.topic,'Direção de arte: '+item.image_prompt,'Se houver imagem de referência, use-a apenas como referência de estilo, cores e composição; crie um novo post, não copie literalmente. A manchete deve ter de 3 a 6 palavras, tipografia muito grande e de alto contraste, totalmente legível quando reduzida a miniatura de 150x150 pixels. Mantenha toda a manchete dentro de margens de segurança de 12% em cada lado, sem letras cortadas. Evite blocos longos de texto e hashtags na arte. Varie enquadramento, perspectiva e hierarquia visual; NÃO replique a composição da referência, apenas a linguagem de marca. Evite depoimentos, ofertas ou dados não confirmados.'].join('\n').slice(0,5000);
 const paths=(brand.reference_paths||[]) as string[];
 let response:Response;
 if(paths.length){
