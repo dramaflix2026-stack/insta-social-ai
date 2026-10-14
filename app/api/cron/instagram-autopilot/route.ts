@@ -5,6 +5,7 @@ export async function GET(req:Request){
 if(!process.env.CRON_SECRET||req.headers.get('authorization')!=='Bearer '+process.env.CRON_SECRET)return Response.json({error:'Unauthorized'},{status:401});
 const db=admin();const dryRun=process.env.AUTOPILOT_PUBLISH_ENABLED!=='true';
 const checkedAt=new Date().toISOString();
+const traceId=crypto.randomUUID();
 // Each invocation processes at most one publication to stay within short serverless execution limits.
 // Run this endpoint repeatedly via an external scheduler for sub-daily posting cadence.
 const {data:due,error}=await db.from('social_plan_items').select('id,user_id,plan_id,topic,image_prompt,caption,scheduled_at,asset_id,status,social_plans!inner(status,account_id,brand_id)').in('status',['planned','ready']).eq('social_plans.status','active').not('approved_at','is',null).lte('scheduled_at',new Date().toISOString()).order('scheduled_at',{ascending:true}).limit(1);
@@ -14,6 +15,7 @@ const results=[];
 for(const item of due||[]){
 let stage='claim';const plan=item.social_plans as unknown as {account_id:string;brand_id:string};let assetId=item.asset_id as string|null;
 const {data:claim,error:claimError}=await db.from('social_plan_items').update({status:'generating',error:null}).eq('id',item.id).eq('status',item.status).select('id').maybeSingle();if(claimError)throw Error('Unable to claim due item');if(!claim)continue;
+console.info('[autopilot] claimed',{traceId,itemId:item.id});
 try{
 const {data:account}=await db.from('instagram_accounts').select('ig_user_id,access_token,token_expires_at').eq('id',plan.account_id).eq('user_id',item.user_id).single();
 if(!account)throw Error('Instagram account missing');
@@ -57,14 +59,20 @@ await new Promise(resolve=>setTimeout(resolve,2000));
 }
 if(!processed)throw Error('Instagram media not ready. No publication requested. Container '+String(cj.id));
 stage='publish_uncertain';
+// Once media_publish is attempted, a timeout or network failure is ambiguous.
+// Never automatically retry this item: it may already be live on Instagram.
 const publish=await fetch(graph+'/'+encodeURIComponent(account.ig_user_id)+'/media_publish',{method:'POST',headers:{'Content-Type':'application/x-www-form-urlencoded'},body:new URLSearchParams({creation_id:cj.id,access_token:account.access_token})});
 const pj=await publish.json();if(!publish.ok||!pj.id)throw Error('Instagram publication unconfirmed: '+String(pj.error?.message||publish.status).slice(0,120));
 stage='record';
 const {data:post,error:pe}=await db.from('instagram_posts').insert({user_id:item.user_id,account_id:plan.account_id,asset_id:assetId,caption:item.caption,scheduled_at:item.scheduled_at,status:'published',remote_id:String(pj.id)}).select('id').single();
-if(pe)throw Error('Published on Instagram but local record failed; remote_media_id='+String(pj.id)+'; manual reconciliation required');
-const {error:recordError}=await db.from('social_plan_items').update({status:'published',post_id:post.id,error:null}).eq('id',item.id);if(recordError)throw Error('Published on Instagram; remote_media_id='+String(pj.id)+'; item status reconciliation required');
+if(pe){await db.from('social_plan_items').update({status:'published',error:'Instagram confirmou publicação '+String(pj.id)+'; registro auxiliar pendente de reconciliação'}).eq('id',item.id);results.push({id:item.id,status:'published',reconciliation_required:true});continue;}
+const {error:recordError}=await db.from('social_plan_items').update({status:'published',post_id:post.id,error:null}).eq('id',item.id);if(recordError){console.error('[autopilot] confirmed remotely but local status update failed',{traceId,itemId:item.id,remoteId:String(pj.id),code:recordError.code});results.push({id:item.id,status:'remote_confirmed_reconciliation_required'});continue;}
+console.info('[autopilot] published',{traceId,itemId:item.id,remoteId:String(pj.id)});
 results.push({id:item.id,status:'published'});
-}catch(e){const reason=(e instanceof Error?e.message:'Unknown failure').slice(0,220);await db.from('social_plan_items').update({status:'failed',error:stage+': '+reason+(stage==='publish_uncertain'?' | Verify Instagram before retrying.':'')}).eq('id',item.id);results.push({id:item.id,status:'failed',stage});}
+}catch(e){const reason=(e instanceof Error?e.message:'Unknown failure').slice(0,220);const ambiguous=stage==='publish_uncertain'||stage==='record';
+await db.from('social_plan_items').update({status:'failed',error:stage+': '+reason+(ambiguous?' | PUBLICAÇÃO INCERTA: conferir Instagram antes de qualquer nova tentativa.':'')}).eq('id',item.id);
+console.error('[autopilot] item failed',{traceId,itemId:item.id,stage,ambiguous});
+results.push({id:item.id,status:ambiguous?'reconciliation_required':'failed',stage});}
 }
-return Response.json({mode:'enabled',checked_at:checkedAt,processed:results.length,results},{headers:{'Cache-Control':'no-store'}});
+return Response.json({mode:'enabled',trace_id:traceId,checked_at:checkedAt,processed:results.length,results},{headers:{'Cache-Control':'no-store'}});
 }
