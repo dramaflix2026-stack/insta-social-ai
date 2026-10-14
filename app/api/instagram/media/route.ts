@@ -29,6 +29,6 @@ export async function POST(req:Request){
       await sb.storage.from('social-media').remove([path]);
       throw error;
     }
-    return Response.json({asset:{...data,url:sb.storage.from('social-media').getPublicUrl(path).data.publicUrl}});
+    const {data:signed}=await sb.storage.from('social-media').createSignedUrl(path,3600);return Response.json({asset:{...data,url:signed?.signedUrl||sb.storage.from('social-media').getPublicUrl(path).data.publicUrl}});
   }catch(e){return failure(e)}
 }
