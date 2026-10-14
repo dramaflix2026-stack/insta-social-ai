@@ -23,6 +23,21 @@ const imageUrl=db.storage.from('social-media').getPublicUrl(asset.storage_path).
 const base='https://graph.instagram.com/v24.0/'+encodeURIComponent(account.ig_user_id);
 const create=await fetch(base+'/media',{method:'POST',headers:{'Content-Type':'application/x-www-form-urlencoded'},body:new URLSearchParams({image_url:imageUrl,caption:item.caption,access_token:account.access_token}),cache:'no-store'});
 const created=await create.json();if(!create.ok||!created.id)throw Error('Erro ao preparar mídia: '+String(created.error?.message||create.status).slice(0,120));
+stage='media_processing';
+let ready=false;let lastStatus='UNKNOWN';
+for(let attempt=0;attempt<8;attempt++){
+ const statusUrl=new URL('https://graph.instagram.com/v24.0/'+encodeURIComponent(String(created.id)));
+ statusUrl.searchParams.set('fields','status_code,status');
+ statusUrl.searchParams.set('access_token',account.access_token);
+ const sr=await fetch(statusUrl.toString(),{cache:'no-store'});
+ const sj=await sr.json();
+ if(!sr.ok)throw Error('Falha ao consultar processamento da mídia: '+String(sj.error?.message||sr.status).slice(0,120));
+ lastStatus=String(sj.status_code||'UNKNOWN');
+ if(lastStatus==='FINISHED'){ready=true;break}
+ if(lastStatus==='ERROR'||lastStatus==='EXPIRED')throw Error('Instagram não conseguiu processar a mídia: '+lastStatus);
+ await new Promise(resolve=>setTimeout(resolve,2000));
+}
+if(!ready)throw Error('Imagem ainda em processamento ('+lastStatus+'). Nenhuma publicação foi solicitada. Contêiner: '+String(created.id));
 stage='publish_uncertain';
 const publish=await fetch(base+'/media_publish',{method:'POST',headers:{'Content-Type':'application/x-www-form-urlencoded'},body:new URLSearchParams({creation_id:created.id,access_token:account.access_token}),cache:'no-store'});
 const published=await publish.json();if(!publish.ok||!published.id)throw Error('Resultado da publicação não confirmado: '+String(published.error?.message||publish.status).slice(0,120));
@@ -31,6 +46,6 @@ const {data:post,error:postError}=await db.from('instagram_posts').insert({user_
 if(postError){await db.from('social_plan_items').update({status:'failed',error:'Publicado no Instagram, mas falhou registro local. Instagram ID: '+published.id}).eq('id',id);return Response.json({published:true,remote_id:published.id,warning:'Publicado; falha no registro local'});}
 await db.from('social_plan_items').update({status:'published',post_id:post.id,error:null}).eq('id',id);
 return Response.json({published:true,remote_id:published.id});
-}catch(e){const reason=(e instanceof Error?e.message:'Falha inesperada').slice(0,200);await db.from('social_plan_items').update({status:'failed',error:stage+': '+reason}).eq('id',id);throw Error(reason)}
+}catch(e){const reason=(e instanceof Error?e.message:'Falha inesperada').slice(0,200);await db.from('social_plan_items').update({status:'failed',error:stage+': '+reason+(stage==='publish_uncertain'?' | Verifique o Instagram antes de tentar novamente.':'')}).eq('id',id);throw Error(reason)}
 }catch(e){return failure(e)}
 }
