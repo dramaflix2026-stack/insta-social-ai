@@ -7,7 +7,7 @@ const db=admin();const dryRun=process.env.AUTOPILOT_PUBLISH_ENABLED!=='true';
 const checkedAt=new Date().toISOString();
 // Each invocation processes at most one publication to stay within short serverless execution limits.
 // Run this endpoint repeatedly via an external scheduler for sub-daily posting cadence.
-const {data:due,error}=await db.from('social_plan_items').select('id,user_id,plan_id,topic,image_prompt,caption,scheduled_at,asset_id,status,social_plans!inner(status,account_id,brand_id)').in('status',['planned','ready']).eq('social_plans.status','active').lte('scheduled_at',new Date().toISOString()).order('scheduled_at',{ascending:true}).limit(1);
+const {data:due,error}=await db.from('social_plan_items').select('id,user_id,plan_id,topic,image_prompt,caption,scheduled_at,asset_id,status,social_plans!inner(status,account_id,brand_id)').in('status',['planned','ready']).eq('social_plans.status','active').not('approved_at','is',null).lte('scheduled_at',new Date().toISOString()).order('scheduled_at',{ascending:true}).limit(1);
 if(error)return Response.json({error:'Unable to load due items'},{status:500});
 if(dryRun)return Response.json({mode:'dry_run',checked_at:checkedAt,due:(due||[]).map(x=>({id:x.id,status:x.status}))},{headers:{'Cache-Control':'no-store'}});
 const results=[];
