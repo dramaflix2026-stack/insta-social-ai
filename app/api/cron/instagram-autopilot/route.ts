@@ -4,6 +4,8 @@ const graph='https://graph.instagram.com/v24.0';
 export async function GET(req:Request){
 if(!process.env.CRON_SECRET||req.headers.get('authorization')!=='Bearer '+process.env.CRON_SECRET)return Response.json({error:'Unauthorized'},{status:401});
 const db=admin();const dryRun=process.env.AUTOPILOT_PUBLISH_ENABLED!=='true';
+// Each invocation processes at most one publication to stay within short serverless execution limits.
+// Run this endpoint repeatedly via an external scheduler for sub-daily posting cadence.
 const {data:due,error}=await db.from('social_plan_items').select('id,user_id,plan_id,topic,image_prompt,caption,scheduled_at,asset_id,status,social_plans!inner(status,account_id,brand_id)').in('status',['planned','ready']).eq('social_plans.status','active').lte('scheduled_at',new Date().toISOString()).order('scheduled_at',{ascending:true}).limit(1);
 if(error)return Response.json({error:'Unable to load due items'},{status:500});
 if(dryRun)return Response.json({mode:'dry_run',due:(due||[]).map(x=>({id:x.id,status:x.status}))});
@@ -14,6 +16,7 @@ const {data:claim}=await db.from('social_plan_items').update({status:'generating
 try{
 const {data:account}=await db.from('instagram_accounts').select('ig_user_id,access_token,token_expires_at').eq('id',plan.account_id).eq('user_id',item.user_id).single();
 if(!account)throw Error('Instagram account missing');
+const {data:stillActive}=await db.from('social_plans').select('id').eq('id',item.plan_id).eq('user_id',item.user_id).eq('status','active').maybeSingle();if(!stillActive)throw Error('Plan paused before publication');
 if(account.token_expires_at&&Date.parse(account.token_expires_at)<Date.now()+3600000)throw Error('Instagram token expired: reconnect account');
 if(!assetId){
 stage='generation';
@@ -35,6 +38,7 @@ await db.from('social_plan_items').update({asset_id:assetId,status:'ready',previ
 const {error:ue}=await db.from('usage_events').insert({user_id:item.user_id,kind:'image_generation',units:1});if(ue)throw Error('Usage recording failed: manual reconciliation required');
 }
 stage='publish';
+const {data:activeBeforePublish}=await db.from('social_plans').select('id').eq('id',item.plan_id).eq('user_id',item.user_id).eq('status','active').maybeSingle();if(!activeBeforePublish)throw Error('Plan paused before publication');
 const {data:asset}=await db.from('media_assets').select('storage_path').eq('id',assetId).eq('user_id',item.user_id).single();if(!asset)throw Error('Image asset unavailable');
 const imageUrl=db.storage.from('social-media').getPublicUrl(asset.storage_path).data.publicUrl;
 const creation=await fetch(graph+'/'+encodeURIComponent(account.ig_user_id)+'/media',{method:'POST',headers:{'Content-Type':'application/x-www-form-urlencoded'},body:new URLSearchParams({image_url:imageUrl,caption:item.caption,access_token:account.access_token})});
@@ -56,8 +60,8 @@ const publish=await fetch(graph+'/'+encodeURIComponent(account.ig_user_id)+'/med
 const pj=await publish.json();if(!publish.ok||!pj.id)throw Error('Instagram publication unconfirmed: '+String(pj.error?.message||publish.status).slice(0,120));
 stage='record';
 const {data:post,error:pe}=await db.from('instagram_posts').insert({user_id:item.user_id,account_id:plan.account_id,asset_id:assetId,caption:item.caption,scheduled_at:item.scheduled_at,status:'published',remote_id:String(pj.id)}).select('id').single();
-if(pe)throw Error('Published on Instagram but local record failed: '+String(pj.id));
-await db.from('social_plan_items').update({status:'published',post_id:post.id,error:null}).eq('id',item.id);
+if(pe)throw Error('Published on Instagram but local record failed; remote_media_id='+String(pj.id)+'; manual reconciliation required');
+const {error:recordError}=await db.from('social_plan_items').update({status:'published',post_id:post.id,error:null}).eq('id',item.id);if(recordError)throw Error('Published on Instagram; remote_media_id='+String(pj.id)+'; item status reconciliation required');
 results.push({id:item.id,status:'published'});
 }catch(e){const reason=(e instanceof Error?e.message:'Unknown failure').slice(0,220);await db.from('social_plan_items').update({status:'failed',error:stage+': '+reason+(stage==='publish_uncertain'?' | Verify Instagram before retrying.':'')}).eq('id',item.id);results.push({id:item.id,status:'failed',stage});}
 }
