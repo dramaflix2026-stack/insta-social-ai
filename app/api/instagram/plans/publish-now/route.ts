@@ -14,8 +14,9 @@ if(!account)throw Error('Conta vinculada ao plano não encontrada. Confira se a 
 if(account.token_expires_at&&Date.parse(account.token_expires_at)<Date.now()+3600000)throw Error('Reconecte o Instagram');
 const {data:asset}=await db.from('media_assets').select('storage_path').eq('id',item.asset_id).eq('user_id',user.id).single();
 if(!asset)throw Error('Imagem não encontrada');
-const {data:claim}=await db.from('social_plan_items').update({status:'publishing',error:null}).eq('id',id).eq('user_id',user.id).eq('status','ready').select('id').maybeSingle();
-if(!claim)throw Error('Publicação já está em processamento');
+const {data:claim,error:claimError}=await db.from('social_plan_items').update({status:'publishing',error:null}).eq('id',id).eq('user_id',user.id).eq('status','ready').select('id').maybeSingle();
+if(claimError)throw Error('Falha ao reservar publicação: '+claimError.message);
+if(!claim)throw Error('Publicação não está mais pronta ou já foi reservada. Atualize a página.');
 let stage='container';
 try{
 const imageUrl=db.storage.from('social-media').getPublicUrl(asset.storage_path).data.publicUrl;
