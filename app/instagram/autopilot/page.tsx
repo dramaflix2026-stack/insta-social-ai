@@ -1,7 +1,7 @@
 'use client';
 import {useEffect,useRef,useState} from 'react';
 import Link from 'next/link';
-import {ArrowLeft,Sparkles,CalendarDays,PauseCircle,PlayCircle} from 'lucide-react';
+import {ArrowLeft,Sparkles,CalendarDays,PauseCircle,PlayCircle,Zap} from 'lucide-react';
 type Brand={id:string;name:string;niche:string;instructions:string;reference_paths?:string[];reference_urls?:string[]};
 type Account={id:string;username:string};
 type Item={id:string;topic:string;image_prompt:string;caption:string;scheduled_at:string;status:string;error?:string;asset_id?:string;media_assets?:{storage_path:string}|null};
