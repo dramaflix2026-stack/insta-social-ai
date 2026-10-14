@@ -4,15 +4,16 @@ const graph='https://graph.instagram.com/v24.0';
 export async function GET(req:Request){
 if(!process.env.CRON_SECRET||req.headers.get('authorization')!=='Bearer '+process.env.CRON_SECRET)return Response.json({error:'Unauthorized'},{status:401});
 const db=admin();const dryRun=process.env.AUTOPILOT_PUBLISH_ENABLED!=='true';
+const checkedAt=new Date().toISOString();
 // Each invocation processes at most one publication to stay within short serverless execution limits.
 // Run this endpoint repeatedly via an external scheduler for sub-daily posting cadence.
 const {data:due,error}=await db.from('social_plan_items').select('id,user_id,plan_id,topic,image_prompt,caption,scheduled_at,asset_id,status,social_plans!inner(status,account_id,brand_id)').in('status',['planned','ready']).eq('social_plans.status','active').lte('scheduled_at',new Date().toISOString()).order('scheduled_at',{ascending:true}).limit(1);
 if(error)return Response.json({error:'Unable to load due items'},{status:500});
-if(dryRun)return Response.json({mode:'dry_run',due:(due||[]).map(x=>({id:x.id,status:x.status}))},{headers:{'Cache-Control':'no-store'}});
+if(dryRun)return Response.json({mode:'dry_run',checked_at:checkedAt,due:(due||[]).map(x=>({id:x.id,status:x.status}))},{headers:{'Cache-Control':'no-store'}});
 const results=[];
 for(const item of due||[]){
 let stage='claim';const plan=item.social_plans as unknown as {account_id:string;brand_id:string};let assetId=item.asset_id as string|null;
-const {data:claim}=await db.from('social_plan_items').update({status:'generating',error:null}).eq('id',item.id).eq('status',item.status).select('id').maybeSingle();if(!claim)continue;
+const {data:claim,error:claimError}=await db.from('social_plan_items').update({status:'generating',error:null}).eq('id',item.id).eq('status',item.status).select('id').maybeSingle();if(claimError)throw Error('Unable to claim due item');if(!claim)continue;
 try{
 const {data:account}=await db.from('instagram_accounts').select('ig_user_id,access_token,token_expires_at').eq('id',plan.account_id).eq('user_id',item.user_id).single();
 if(!account)throw Error('Instagram account missing');
@@ -65,5 +66,5 @@ const {error:recordError}=await db.from('social_plan_items').update({status:'pub
 results.push({id:item.id,status:'published'});
 }catch(e){const reason=(e instanceof Error?e.message:'Unknown failure').slice(0,220);await db.from('social_plan_items').update({status:'failed',error:stage+': '+reason+(stage==='publish_uncertain'?' | Verify Instagram before retrying.':'')}).eq('id',item.id);results.push({id:item.id,status:'failed',stage});}
 }
-return Response.json({mode:'enabled',processed:results.length,results});
+return Response.json({mode:'enabled',checked_at:checkedAt,processed:results.length,results},{headers:{'Cache-Control':'no-store'}});
 }
