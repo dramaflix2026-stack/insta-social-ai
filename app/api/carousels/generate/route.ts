@@ -5,7 +5,7 @@ export async function POST(req:Request){
   await session();
   const input=await req.json();
   const topic=String(input.topic||'').trim().slice(0,350);
-  const count=Math.min(10,Math.max(3,Number(input.count)||5));
+  const requestedCount=Number(input.count);const count=Number.isInteger(requestedCount)?Math.min(10,Math.max(3,requestedCount)):5;
   const brand=String(input.brand||'').slice(0,100);
   const niche=String(input.niche||'').slice(0,200);
   const instructions=String(input.instructions||'').slice(0,800);
@@ -22,7 +22,7 @@ export async function POST(req:Request){
   if(!response.ok)throw Error('Não foi possível gerar o carrossel');
   const raw=await response.json();
   const data=JSON.parse(raw.choices?.[0]?.message?.content||'{}');
-  if(!Array.isArray(data.slides)||data.slides.length!==count)throw Error('Resposta incompleta da IA. Tente novamente.');
+  if(!Array.isArray(data.slides)||data.slides.length!==count||data.slides.some((slide:unknown)=>!slide||typeof slide!=='object'||typeof (slide as Record<string,unknown>).headline!=='string'||typeof (slide as Record<string,unknown>).body!=='string'||!(slide as {headline:string}).headline.trim()||!(slide as {body:string}).body.trim()))throw Error('Resposta incompleta da IA. Tente novamente.');
   return Response.json({slides:data.slides.map((slide:{headline?:unknown;body?:unknown})=>({headline:String(slide.headline||'').slice(0,75),body:String(slide.body||'').slice(0,230)})),caption:String(data.caption||'').slice(0,1200),hashtags:Array.isArray(data.hashtags)?data.hashtags.slice(0,12).map((tag:unknown)=>String(tag).slice(0,40)):[]});
  }catch(error){return failure(error)}
 }
