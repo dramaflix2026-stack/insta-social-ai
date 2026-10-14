@@ -20,6 +20,9 @@ export default function Page(){
  const [font,setFont]=useState('Arial');
  const canvas=useRef<HTMLCanvasElement>(null);
  const brand=brands.find(x=>x.id===brandId);
+ const [ready,setReady]=useState(false);
+ useEffect(()=>{try{const v=window.localStorage.getItem('carousel-draft-v1');if(v){const d=JSON.parse(v);if(Array.isArray(d.slides)){setSlides(d.slides.slice(0,10));setTopic(d.topic||'');setCaption(d.caption||'')}}}catch{}setReady(true)},[]);
+ useEffect(()=>{if(ready)window.localStorage.setItem('carousel-draft-v1',JSON.stringify({slides,topic,caption}))},[ready,slides,topic,caption]);
  useEffect(()=>{fetch('/api/instagram/brands').then(r=>r.json()).then(j=>setBrands(j.brands||[])).catch(()=>{})},[]);
  async function generate(){setBusy(true);setError('');try{const r=await fetch('/api/carousels/generate',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({topic,count,brand:brand?.name,niche:brand?.niche,instructions:brand?.instructions})});const j=await r.json();if(!r.ok)throw Error(j.error||'Falha ao gerar');setSlides(j.slides);setCaption(j.caption);setHashtags(j.hashtags);setSelected(0)}catch(e){setError(e instanceof Error?e.message:'Erro na geração')}finally{setBusy(false)}}
  function draw(index:number){const el=canvas.current||document.createElement('canvas');el.width=1080;el.height=1350;const ctx=el.getContext('2d');if(!ctx)return el;const slide=slides[index];if(!slide)return el;ctx.fillStyle=background;ctx.fillRect(0,0,1080,1350);ctx.fillStyle=accent;ctx.fillRect(90,110,110,12);ctx.font='bold 33px Arial';ctx.fillText((brand?.name||'INSTA SOCIAL AI').toUpperCase().slice(0,35),90,205);ctx.fillStyle=foreground;ctx.textBaseline='top';
