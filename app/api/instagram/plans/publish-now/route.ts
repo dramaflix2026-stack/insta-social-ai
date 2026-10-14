@@ -2,14 +2,15 @@ import {session,admin,failure} from '@/lib/server';
 export const maxDuration=60;
 export async function POST(req:Request){
 try{
-const {user}=await session();const b=await req.json();const id=String(b.item_id||'');
+const {user,sb}=await session();const b=await req.json();const id=String(b.item_id||'');
 if(b.confirm!=='PUBLICAR_AGORA')throw Error('Confirmação explícita necessária');
 const db=admin();
 const {data:item,error}=await db.from('social_plan_items').select('id,user_id,asset_id,caption,scheduled_at,status,plan_id,social_plans!inner(account_id,user_id)').eq('id',id).eq('user_id',user.id).single();
 if(error||!item||item.status!=='ready'||!item.asset_id)throw Error('Somente uma imagem pronta e ainda não publicada pode ser enviada');
 const plan=item.social_plans as unknown as {account_id:string};
-const {data:account}=await db.from('instagram_accounts').select('ig_user_id,access_token,token_expires_at').eq('id',plan.account_id).eq('user_id',user.id).single();
-if(!account)throw Error('Conta do Instagram indisponível');
+const {data:account,error:accountError}=await sb.from('instagram_accounts').select('ig_user_id,access_token,token_expires_at').eq('id',plan.account_id).eq('user_id',user.id).maybeSingle();
+if(accountError)throw Error('Erro ao consultar conta Instagram: '+accountError.message);
+if(!account)throw Error('Conta vinculada ao plano não encontrada. Confira se a conta ainda está conectada; o plano não será alterado.');
 if(account.token_expires_at&&Date.parse(account.token_expires_at)<Date.now()+3600000)throw Error('Reconecte o Instagram');
 const {data:asset}=await db.from('media_assets').select('storage_path').eq('id',item.asset_id).eq('user_id',user.id).single();
 if(!asset)throw Error('Imagem não encontrada');
