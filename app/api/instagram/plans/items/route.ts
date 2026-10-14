@@ -8,7 +8,7 @@ const patch:Record<string,string>={};
 if(typeof b.topic==='string')patch.topic=b.topic.trim().slice(0,160);
 if(typeof b.caption==='string')patch.caption=b.caption.trim().slice(0,2200);
 if(typeof b.image_prompt==='string')patch.image_prompt=b.image_prompt.trim().slice(0,3000);
-if(typeof b.scheduled_at==='string'){const t=new Date(b.scheduled_at);if(!Number.isFinite(t.getTime())||t.getTime()<Date.now()+60000)throw Error('Escolha um horário futuro');patch.scheduled_at=t.toISOString()}
+if(typeof b.scheduled_at==='string'){const t=new Date(b.scheduled_at);if(!Number.isFinite(t.getTime())||t.getTime()<=Date.now())throw Error('Escolha um horário posterior ao horário atual. Você pode agendar para daqui a 1 minuto.');patch.scheduled_at=t.toISOString()}
 if(!Object.keys(patch).length)throw Error('Nenhuma alteração enviada');
 const {data,error}=await sb.from('social_plan_items').update(patch).eq('id',id).eq('user_id',user.id).in('status',['planned','ready']).select('id,topic,caption,image_prompt,scheduled_at,status').single();
 if(error)throw error;return Response.json({item:data});
