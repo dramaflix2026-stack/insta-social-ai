@@ -6,11 +6,14 @@ export async function POST(req:Request){
  const body=await req.json();
  const topic=String(body.topic||'').trim().slice(0,350);
  const audience=String(body.audience||'Público geral').slice(0,250);
+ const format=body.format==='shorts'?'shorts':'long';
+ const tone=['educativo','direto','envolvente','profissional'].includes(body.tone)?body.tone:'envolvente';
+ const language=body.language==='en'?'English':'Português brasileiro';
  if(topic.length<5)throw Error('Informe um assunto com pelo menos 5 caracteres');
  if(!process.env.OPENAI_API_KEY)throw Error('IA ainda não configurada');
- const response=await fetch('https://api.openai.com/v1/chat/completions',{method:'POST',headers:{Authorization:'Bearer '+process.env.OPENAI_API_KEY,'Content-Type':'application/json'},body:JSON.stringify({model:process.env.OPENAI_TEXT_MODEL||'gpt-4o-mini',response_format:{type:'json_object'},messages:[{role:'system',content:'Você é estrategista de YouTube. Responda SOMENTE JSON válido com title (máximo 100 caracteres), description (até 2500 caracteres), tags (array de até 12 strings), thumbnail_prompt (até 500 caracteres), shorts_ideas (array de 3 ideias). Nunca invente fatos ou resultados e não prometa métricas.'},{role:'user',content:JSON.stringify({topic,audience})}]})});
+ const response=await fetch('https://api.openai.com/v1/chat/completions',{method:'POST',headers:{Authorization:'Bearer '+process.env.OPENAI_API_KEY,'Content-Type':'application/json'},body:JSON.stringify({model:process.env.OPENAI_TEXT_MODEL||'gpt-4o-mini',response_format:{type:'json_object'},messages:[{role:'system',content:'Você é estrategista de YouTube. Responda SOMENTE JSON válido com title (máximo 100 caracteres), description (até 2500 caracteres), tags (array de até 12 strings), thumbnail_prompt (até 500 caracteres), shorts_ideas (array de 3 ideias), hooks (array de 3 aberturas), outline (array de 5 etapas de roteiro), titles (array de 3 títulos alternativos), cta (frase de chamada para ação). Nunca invente fatos ou resultados e não prometa métricas.'},{role:'user',content:JSON.stringify({topic,audience,format,tone,language})}]})});
  const j=await response.json();if(!response.ok)throw Error('Falha ao gerar sugestões para YouTube');
  const data=JSON.parse(j.choices?.[0]?.message?.content||'{}');
- return Response.json({title:String(data.title||'').slice(0,100),description:String(data.description||'').slice(0,2500),tags:Array.isArray(data.tags)?data.tags.slice(0,12).map(String):[],thumbnail_prompt:String(data.thumbnail_prompt||'').slice(0,500),shorts_ideas:Array.isArray(data.shorts_ideas)?data.shorts_ideas.slice(0,3).map(String):[]});
+ return Response.json({title:String(data.title||'').slice(0,100),description:String(data.description||'').slice(0,2500),tags:Array.isArray(data.tags)?data.tags.slice(0,12).map(String):[],thumbnail_prompt:String(data.thumbnail_prompt||'').slice(0,500),shorts_ideas:Array.isArray(data.shorts_ideas)?data.shorts_ideas.slice(0,3).map(String):[],hooks:Array.isArray(data.hooks)?data.hooks.slice(0,3).map(String):[],outline:Array.isArray(data.outline)?data.outline.slice(0,6).map(String):[],titles:Array.isArray(data.titles)?data.titles.slice(0,3).map(String):[],cta:String(data.cta||'').slice(0,300)});
  }catch(e){return failure(e)}
 }
