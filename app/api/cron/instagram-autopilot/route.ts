@@ -21,7 +21,7 @@ const {data:brand}=await db.from('brand_profiles').select('name,niche,instructio
 const start=new Date();start.setUTCDate(1);start.setUTCHours(0,0,0,0);
 const {count,error:qe}=await db.from('usage_events').select('id',{count:'exact',head:true}).eq('user_id',item.user_id).eq('kind','image_generation').gte('created_at',start.toISOString());if(qe)throw Error('Credit check failed');if((count||0)>=150)throw Error('Monthly image limit reached');
 if(!process.env.OPENAI_API_KEY)throw Error('Image API unavailable');
-const prompt=['Professional square Instagram ad. Brand: '+brand.name,'Business: '+brand.niche,'Brand visual identity: '+brand.instructions,'Topic: '+item.topic,'Art direction: '+item.image_prompt,'Use reference image as style guidance, produce an original visual. No invented offers, customer testimonials or claims.'].join('\n').slice(0,5000);
+const prompt=['Professional square Instagram ad. Brand: '+brand.name,'Business: '+brand.niche,'Brand visual identity: '+brand.instructions,'Topic: '+item.topic,'Art direction: '+item.image_prompt,'IMPORTANT: a headline of 3 to 6 words, huge high-contrast type readable in a 150x150 Instagram grid thumbnail; keep all letters inside 12% safe margins. No paragraphs or hashtags in the image. Keep brand identity but vary composition, camera angle and layout from earlier posts. Use reference image for brand style, never duplicate its layout. No invented offers, customer testimonials or claims.'].join('\n').slice(0,5000);
 let response:Response;
 const ref=(brand.reference_paths||[] as string[]).find((p:string)=>p.startsWith(item.user_id+'/')&&/\.(png|jpg|jpeg)$/i.test(p));
 if(ref){const {data:source,error:se}=await db.storage.from('social-media').download(ref);if(se||!source)throw Error('Reference unavailable');const form=new FormData();form.set('model',process.env.OPENAI_IMAGE_MODEL||'gpt-image-1-mini');form.set('prompt',prompt);form.set('size','1024x1024');form.append('image',new File([source],ref.endsWith('.png')?'reference.png':'reference.jpg',{type:ref.endsWith('.png')?'image/png':'image/jpeg'}));response=await fetch('https://api.openai.com/v1/images/edits',{method:'POST',headers:{Authorization:'Bearer '+process.env.OPENAI_API_KEY},body:form});}
@@ -39,6 +39,18 @@ const {data:asset}=await db.from('media_assets').select('storage_path').eq('id',
 const imageUrl=db.storage.from('social-media').getPublicUrl(asset.storage_path).data.publicUrl;
 const creation=await fetch(graph+'/'+encodeURIComponent(account.ig_user_id)+'/media',{method:'POST',headers:{'Content-Type':'application/x-www-form-urlencoded'},body:new URLSearchParams({image_url:imageUrl,caption:item.caption,access_token:account.access_token})});
 const cj=await creation.json();if(!creation.ok||!cj.id)throw Error('Instagram media error: '+String(cj.error?.message||creation.status).slice(0,120));
+stage='media_processing';
+let processed=false;
+for(let attempt=0;attempt<8;attempt++){
+const u=new URL(graph+'/'+encodeURIComponent(String(cj.id)));
+u.searchParams.set('fields','status_code,status');u.searchParams.set('access_token',account.access_token);
+const sr=await fetch(u.toString(),{cache:'no-store'});const sj=await sr.json();
+if(!sr.ok)throw Error('Instagram media status error: '+String(sj.error?.message||sr.status).slice(0,120));
+if(sj.status_code==='FINISHED'){processed=true;break}
+if(sj.status_code==='ERROR'||sj.status_code==='EXPIRED')throw Error('Instagram media processing '+sj.status_code);
+await new Promise(resolve=>setTimeout(resolve,2000));
+}
+if(!processed)throw Error('Instagram media not ready. No publication requested. Container '+String(cj.id));
 stage='publish_uncertain';
 const publish=await fetch(graph+'/'+encodeURIComponent(account.ig_user_id)+'/media_publish',{method:'POST',headers:{'Content-Type':'application/x-www-form-urlencoded'},body:new URLSearchParams({creation_id:cj.id,access_token:account.access_token})});
 const pj=await publish.json();if(!publish.ok||!pj.id)throw Error('Instagram publication unconfirmed: '+String(pj.error?.message||publish.status).slice(0,120));
@@ -47,7 +59,7 @@ const {data:post,error:pe}=await db.from('instagram_posts').insert({user_id:item
 if(pe)throw Error('Published on Instagram but local record failed: '+String(pj.id));
 await db.from('social_plan_items').update({status:'published',post_id:post.id,error:null}).eq('id',item.id);
 results.push({id:item.id,status:'published'});
-}catch(e){const reason=(e instanceof Error?e.message:'Unknown failure').slice(0,220);await db.from('social_plan_items').update({status:'failed',error:stage+': '+reason}).eq('id',item.id);results.push({id:item.id,status:'failed',stage});}
+}catch(e){const reason=(e instanceof Error?e.message:'Unknown failure').slice(0,220);await db.from('social_plan_items').update({status:'failed',error:stage+': '+reason+(stage==='publish_uncertain'?' | Verify Instagram before retrying.':'')}).eq('id',item.id);results.push({id:item.id,status:'failed',stage});}
 }
 return Response.json({mode:'enabled',processed:results.length,results});
 }
