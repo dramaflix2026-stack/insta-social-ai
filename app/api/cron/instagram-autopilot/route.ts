@@ -8,7 +8,7 @@ const db=admin();const dryRun=process.env.AUTOPILOT_PUBLISH_ENABLED!=='true';
 // Run this endpoint repeatedly via an external scheduler for sub-daily posting cadence.
 const {data:due,error}=await db.from('social_plan_items').select('id,user_id,plan_id,topic,image_prompt,caption,scheduled_at,asset_id,status,social_plans!inner(status,account_id,brand_id)').in('status',['planned','ready']).eq('social_plans.status','active').lte('scheduled_at',new Date().toISOString()).order('scheduled_at',{ascending:true}).limit(1);
 if(error)return Response.json({error:'Unable to load due items'},{status:500});
-if(dryRun)return Response.json({mode:'dry_run',due:(due||[]).map(x=>({id:x.id,status:x.status}))});
+if(dryRun)return Response.json({mode:'dry_run',due:(due||[]).map(x=>({id:x.id,status:x.status}))},{headers:{'Cache-Control':'no-store'}});
 const results=[];
 for(const item of due||[]){
 let stage='claim';const plan=item.social_plans as unknown as {account_id:string;brand_id:string};let assetId=item.asset_id as string|null;
@@ -34,7 +34,7 @@ stage='storage';
 const path=item.user_id+'/'+crypto.randomUUID()+'.png';const {error:up}=await db.storage.from('social-media').upload(path,Buffer.from(j.data[0].b64_json,'base64'),{contentType:'image/png'});if(up)throw Error('Storage failed');
 const {data:asset,error:ae}=await db.from('media_assets').insert({user_id:item.user_id,storage_path:path,media_type:'IMAGE'}).select('id').single();if(ae||!asset)throw Error('Asset recording failed');
 assetId=asset.id;
-await db.from('social_plan_items').update({asset_id:assetId,status:'ready',preview_generated_at:new Date().toISOString()}).eq('id',item.id);
+const saved=await db.from('social_plan_items').update({asset_id:assetId,status:'ready',preview_generated_at:new Date().toISOString()}).eq('id',item.id);if(saved.error)throw Error('Generated asset not attached to item; reconciliation required');
 const {error:ue}=await db.from('usage_events').insert({user_id:item.user_id,kind:'image_generation',units:1});if(ue)throw Error('Usage recording failed: manual reconciliation required');
 }
 stage='publish';
