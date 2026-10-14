@@ -18,6 +18,7 @@ export default function Page(){
  const [accent,setAccent]=useState('#facc15');
  const [foreground,setForeground]=useState('#ffffff');
  const [font,setFont]=useState('Arial');
+ useEffect(()=>{if(!brandId)return;const b=brands.find(x=>x.id===brandId);if(!b)return;const colors=b.instructions.match(/#[0-9a-fA-F]{6}/g);if(colors?.[0])setBackground(colors[0]);if(colors?.[1])setAccent(colors[1]);},[brandId,brands]);
  const canvas=useRef<HTMLCanvasElement>(null);
  const brand=brands.find(x=>x.id===brandId);
  const [ready,setReady]=useState(false);
