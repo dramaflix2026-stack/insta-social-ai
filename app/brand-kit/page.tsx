@@ -1,7 +1,7 @@
 'use client';
 import {useEffect,useState} from 'react';
 import WorkspaceShell from '@/components/workspace-shell';
-type Brand={id:string;name:string;niche:string;instructions:string};
+type Brand={id:string;name:string;niche:string;instructions:string;reference_paths?:string[];reference_urls?:string[]};
 export default function Page(){
  const [brands,setBrands]=useState<Brand[]>([]);
  const [current,setCurrent]=useState('');
