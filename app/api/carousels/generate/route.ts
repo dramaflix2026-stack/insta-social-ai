@@ -2,13 +2,18 @@ import {session,failure} from '@/lib/server';
 export const maxDuration=60;
 export async function POST(req:Request){
  try{
-  await session();
+  const {sb,user}=await session();
   const input=await req.json();
   const topic=String(input.topic||'').trim().slice(0,350);
   const requestedCount=Number(input.count);const count=Number.isInteger(requestedCount)?Math.min(10,Math.max(3,requestedCount)):5;
-  const brand=String(input.brand||'').slice(0,100);
-  const niche=String(input.niche||'').slice(0,200);
-  const instructions=String(input.instructions||'').slice(0,800);
+  let brand='';let niche='';let instructions='';
+  if(input.brandId){
+   const {data,error}=await sb.from('brand_profiles').select('name,niche,instructions').eq('id',String(input.brandId)).eq('user_id',user.id).single();
+   if(error||!data)throw Error('Marca não encontrada ou sem permissão de acesso');
+   brand=String(data.name||'').slice(0,100);
+   niche=String(data.niche||'').slice(0,200);
+   instructions=String(data.instructions||'').slice(0,800);
+  }
   if(topic.length<5)throw Error('Informe um tema com pelo menos cinco caracteres');
   if(!process.env.OPENAI_API_KEY)throw Error('Serviço de IA não configurado');
   const response=await fetch('https://api.openai.com/v1/chat/completions',{
