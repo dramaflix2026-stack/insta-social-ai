@@ -1,3 +1,4 @@
+import {NextResponse} from 'next/server';
 import {session,failure} from '@/lib/server';
 import {randomBytes,createHmac} from 'node:crypto';
 export async function GET(req:Request){
@@ -16,7 +17,7 @@ export async function GET(req:Request){
   url.searchParams.set('prompt','consent');
   url.searchParams.set('scope','https://www.googleapis.com/auth/youtube.upload https://www.googleapis.com/auth/youtube.readonly https://www.googleapis.com/auth/youtube.force-ssl');
   url.searchParams.set('state',state);
-  const res=Response.redirect(url);
+  const res=NextResponse.redirect(url);
   res.headers.append('Set-Cookie','yt_oauth_state='+encodeURIComponent(state)+'; HttpOnly; Secure; SameSite=Lax; Path=/; Max-Age=600');
   return res;
  }catch(e){return failure(e)}
