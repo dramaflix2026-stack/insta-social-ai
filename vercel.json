@@ -3,6 +3,10 @@
     {
       "path": "/api/cron/instagram-autopilot",
       "schedule": "0 12 * * *"
+    },
+    {
+      "path": "/api/cron/instagram",
+      "schedule": "15 12 * * *"
     }
   ]
 }
