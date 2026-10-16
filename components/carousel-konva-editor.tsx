@@ -32,6 +32,10 @@ export default function CarouselKonvaEditor({headline,body,image,premiumFinal=fa
  const [photo,setPhoto]=useState<HTMLImageElement|null>(null);
  const [width,setWidth]=useState(420);
  const scale=width/1080;
+ // Premium images already include the finished artwork and its typography.
+ // Preserve the entire original image rather than cropping its top/bottom or overlaying duplicate text.
+ const imageFit=photo?Math.min(1080/photo.width,1350/photo.height):1;
+ const premiumBounds=photo?{x:(1080-photo.width*imageFit)/2,y:(1350-photo.height*imageFit)/2,w:photo.width*imageFit,h:photo.height*imageFit}:null;
  const light=templateId==='minimal'||templateId==='luxury'||templateId==='pop';
  const role=layout.role||defaultSlideLayout(index,count).role;
  const exported=useCallback(()=>{
@@ -73,12 +77,13 @@ export default function CarouselKonvaEditor({headline,body,image,premiumFinal=fa
 
  const photoShade=role==='split-right'?{x:370,y:0,w:710,h:1350}:role==='feature'?{x:0,y:740,w:1080,h:610}:{x:0,y:0,w:770,h:1350};
  return <div className={active?'mx-auto max-w-[420px]':'absolute -left-[20000px] top-0 pointer-events-none'} aria-hidden={!active}>
-  {active&&<div className="mb-3 space-y-2"><p className="text-center text-xs text-zinc-400">Arraste os textos, selecione para redimensionar. Alterações ficam salvas por slide.</p><div className="flex gap-2 items-center justify-center"><label className="text-xs text-zinc-300" htmlFor={'role-'+index}>Composição</label><select id={'role-'+index} className="rounded-lg bg-zinc-800 p-2 text-xs text-white" value={role} onChange={e=>{const next=defaultSlideLayout(index,count);next.role=e.target.value as LayoutRole;onChange({...defaultSlideLayoutForRole(next.role),role:next.role})}}>{roles.map(r=><option key={r} value={r}>{r}</option>)}</select></div></div>}
+  {active&&!premiumFinal&&<div className="mb-3 space-y-2"><p className="text-center text-xs text-zinc-400">Arraste os textos, selecione para redimensionar. Alterações ficam salvas por slide.</p><div className="flex gap-2 items-center justify-center"><label className="text-xs text-zinc-300" htmlFor={'role-'+index}>Composição</label><select id={'role-'+index} className="rounded-lg bg-zinc-800 p-2 text-xs text-white" value={role} onChange={e=>{const next=defaultSlideLayout(index,count);next.role=e.target.value as LayoutRole;onChange({...defaultSlideLayoutForRole(next.role),role:next.role})}}>{roles.map(r=><option key={r} value={r}>{r}</option>)}</select></div></div>}
+  {active&&premiumFinal&&<p className="mb-3 text-center text-xs text-zinc-400">Arte premium completa, sem cortes. Os textos desta imagem fazem parte da arte original.</p>}
   <Stage ref={stage} width={1080*scale} height={1350*scale} scaleX={scale} scaleY={scale} className="overflow-hidden rounded-xl border border-white/10" onMouseDown={e=>{if(e.target===e.target.getStage())setSelected(null)}}>
    <Layer>
     <Rect width={1080} height={1350} fill={background} listening={false}/>
     {photo&&picture&&<Group clipX={0} clipY={0} clipWidth={1080} clipHeight={1350} listening={false}>
-     {premiumFinal?<><KImage image={photo} x={0} y={0} width={1080} height={1350} opacity={.28} blurRadius={20} filters={[]} /><KImage image={photo} x={(1080-Math.min(1080,1350*photo.width/photo.height))/2} y={(1350-Math.min(1350,1080*photo.height/photo.width))/2} width={Math.min(1080,1350*photo.width/photo.height)} height={Math.min(1350,1080*photo.height/photo.width)}/></>:<KImage image={photo} x={picture.x} y={picture.y} width={picture.w} height={picture.h}/>}
+     {premiumFinal&&premiumBounds?<><KImage image={photo} x={picture.x} y={picture.y} width={picture.w} height={picture.h} opacity={.18}/><KImage image={photo} x={premiumBounds.x} y={premiumBounds.y} width={premiumBounds.w} height={premiumBounds.h}/></>:<KImage image={photo} x={picture.x} y={picture.y} width={picture.w} height={picture.h}/>}
     </Group>}
     {!premiumFinal&&<Group listening={false}>
     <Rect x={photoShade.x} y={photoShade.y} width={photoShade.w} height={photoShade.h} fill={light?'rgba(0,0,0,.10)':'rgba(0,0,0,.21)'} listening={false}/>
@@ -119,7 +124,7 @@ export default function CarouselKonvaEditor({headline,body,image,premiumFinal=fa
     <Text x={80} y={1227} text={String(index+1).padStart(2,'0')+' / '+String(count).padStart(2,'0')} fontSize={27} fontStyle="bold" fontFamily={font} fill="#ffffff" listening={false}/>
     {!growth&&<Text x={745} y={1229} width={255} align="right" text={index===count-1?'COMPARTILHE':'DESLIZE  →'} fontSize={23} fontFamily={font} fill={hasFull?'#ffffff':ink} listening={false}/>}
     </Group>}
-    <Transformer ref={transformer} rotateEnabled={false} keepRatio={false} enabledAnchors={['middle-left','middle-right','top-left','top-right','bottom-left','bottom-right']} boundBoxFunc={(oldBox,newBox)=>newBox.width<110||newBox.height<25?oldBox:newBox}/>
+    {!premiumFinal&&<Transformer ref={transformer} rotateEnabled={false} keepRatio={false} enabledAnchors={['middle-left','middle-right','top-left','top-right','bottom-left','bottom-right']} boundBoxFunc={(oldBox,newBox)=>newBox.width<110||newBox.height<25?oldBox:newBox}/>}
    </Layer>
   </Stage>
  </div>;
