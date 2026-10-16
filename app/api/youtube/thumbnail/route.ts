@@ -10,14 +10,21 @@ export async function POST(req:Request){
   const reference=typeof body?.reference==='string'?body.reference:'';
   const hasReference=reference.startsWith('data:image/png;base64,')||reference.startsWith('data:image/jpeg;base64,')||reference.startsWith('data:image/webp;base64,');
   if(reference&&!hasReference)throw Error('Referência inválida. Envie PNG, JPG ou WebP');
-  const instruction='Crie uma thumbnail profissional para YouTube em composição horizontal. '+(hasReference?'Use a imagem fornecida como referência visual de composição e estilo, mas crie uma thumbnail nova e original com o tema solicitado. Não copie logos, marcas ou pessoas identificáveis da referência. ':'')+'Alto contraste, assunto claro e visual editorial chamativo. Briefing: '+prompt;
+  const instruction=[
+   'Crie uma imagem de capa PREMIUM para YouTube, estilo de diretor de arte profissional, hiper-realista quando houver pessoas, acabamento publicitário, iluminação cinematográfica, foco preciso, detalhes nítidos, sem artefatos, sem distorções anatômicas e sem objetos duplicados.',
+   'A composição final será recortada de 1536x1024 para 16:9. Coloque TODO elemento importante dentro da faixa horizontal central, aproximadamente entre 12% e 88% da altura original. Reserve margens internas de pelo menos 10% nas laterais. Nunca posicione rostos, mãos ou elementos relevantes encostados nas bordas.',
+   'Use hierarquia visual forte, sujeito principal bem definido, contraste elegante e fundo organizado. Evite poluição visual, excesso de ícones e elementos financeiros inventados.',
+   'CRÍTICO: NÃO desenhe texto, palavras, números, cifras, logotipos ou caracteres na imagem. Deixe uma área limpa e contrastante para que o título seja aplicado posteriormente com tipografia real, sem letras defeituosas.',
+   hasReference?'A imagem enviada é referência de composição, paleta, iluminação e posicionamento dos elementos. Crie uma imagem NOVA para o tema descrito; não copie textos, logos, números nem pessoas da referência.':'Crie uma composição visual original e adequada ao tema.',
+   'Assunto e direção criativa do usuário: '+prompt
+  ].join(' ');
   const form=new FormData();
-  if(hasReference){const [header,payload]=reference.split(',');const mime=header.slice(5).split(';')[0];const bytes=Buffer.from(payload,'base64');if(bytes.length>4*1024*1024)throw Error('Imagem de referência deve ter até 4 MB');form.append('image',new Blob([bytes],{type:mime}),mime==='image/png'?'reference.png':mime==='image/webp'?'reference.webp':'reference.jpg');form.append('model',process.env.OPENAI_IMAGE_MODEL||'gpt-image-1-mini');form.append('prompt',instruction);form.append('size','1536x1024');form.append('quality','low')}
+  if(hasReference){const [header,payload]=reference.split(',');const mime=header.slice(5).split(';')[0];const bytes=Buffer.from(payload,'base64');if(bytes.length>4*1024*1024)throw Error('Imagem de referência deve ter até 4 MB');form.append('image',new Blob([bytes],{type:mime}),mime==='image/png'?'reference.png':mime==='image/webp'?'reference.webp':'reference.jpg');form.append('model',process.env.OPENAI_IMAGE_MODEL||'gpt-image-1-mini');form.append('prompt',instruction);form.append('size','1536x1024');form.append('quality','medium')}
   const response=await fetch(hasReference?'https://api.openai.com/v1/images/edits':'https://api.openai.com/v1/images/generations',{
 
    method:'POST',
    headers:hasReference?{Authorization:'Bearer '+process.env.OPENAI_API_KEY}:{Authorization:'Bearer '+process.env.OPENAI_API_KEY,'Content-Type':'application/json'},
-   body:hasReference?form:JSON.stringify({model:process.env.OPENAI_IMAGE_MODEL||'gpt-image-1-mini',prompt:instruction,size:'1536x1024',quality:'low',n:1})
+   body:hasReference?form:JSON.stringify({model:process.env.OPENAI_IMAGE_MODEL||'gpt-image-1-mini',prompt:instruction,size:'1536x1024',quality:'medium',n:1})
   });
   const result=await response.json();
   if(!response.ok)throw Error('Não foi possível gerar a thumbnail: '+String(result.error?.message||'Erro do provedor').slice(0,130));
