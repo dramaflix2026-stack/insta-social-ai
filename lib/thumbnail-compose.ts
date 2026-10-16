@@ -28,7 +28,7 @@ export async function composeThumbnail(source:string,headline:string):Promise<st
   ctx.font=font(size);ctx.shadowColor='#000';ctx.shadowBlur=16;ctx.shadowOffsetY=5;
   ctx.lineWidth=Math.max(5,size*.075);ctx.strokeStyle='#090909';ctx.strokeText(line,48,y);
   ctx.shadowBlur=0;ctx.shadowOffsetY=0;
-  ctx.fillStyle=i===Math.min(1,lines.length-1)?'#ffcf31':'#fff';
+  ctx.fillStyle=/\bIA\b/.test(line)?'#00ed8a':/DINHEIRO/.test(line)?'#ffcf31':'#fff';
   ctx.fillText(line,48,y);
  });
  return canvas.toDataURL('image/png');
