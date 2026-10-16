@@ -8,7 +8,6 @@ export type TextPlacement={x:number;y:number;width:number;fontSize:number};
 export type SlideLayout={role:LayoutRole;title:TextPlacement;body:TextPlacement};
 type Props={headline:string;body:string;image?:string;background:string;foreground:string;accent:string;font:string;brand:string;index:number;count:number;templateId:string;layout:SlideLayout;onChange:(value:SlideLayout)=>void;registerExport:(index:number,fn:(()=>string)|null)=>void;active:boolean};
 export function defaultSlideLayout(index:number,count:number):SlideLayout{
- function defaultSlideLayoutForRole(role:LayoutRole):SlideLayout{const index=role==='cover'?0:role==='cta'?6:Math.max(1,['split-left','split-right','feature','checklist','quote'].indexOf(role)+1);return defaultSlideLayout(index,7)}
 const roles:LayoutRole[]=['cover','split-left','split-right','feature','checklist','quote','cta'];
  const role=index===0?'cover':index===count-1?'cta':roles[1+((index-1)%5)];
  const positions:Record<LayoutRole,[TextPlacement,TextPlacement]>={
@@ -23,6 +22,7 @@ const roles:LayoutRole[]=['cover','split-left','split-right','feature','checklis
  return {role,title:{...positions[role][0]},body:{...positions[role][1]}};
 }
 const roles:LayoutRole[]=['cover','split-left','split-right','feature','checklist','quote','cta'];
+ function defaultSlideLayoutForRole(role:LayoutRole):SlideLayout{const index=role==='cover'?0:role==='cta'?6:Math.max(1,['split-left','split-right','feature','checklist','quote'].indexOf(role)+1);return defaultSlideLayout(index,7)}
 function readableColor(hex:string){const s=hex.replace('#','');if(s.length!==6)return '#ffffff';const r=parseInt(s.slice(0,2),16),g=parseInt(s.slice(2,4),16),b=parseInt(s.slice(4,6),16);return .2126*r+.7152*g+.0722*b>145?'#1b1b1b':'#ffffff'}
 export default function CarouselKonvaEditor({headline,body,image,background,foreground,accent,font,brand,index,count,templateId,layout,onChange,registerExport,active}:Props){
  const stage=useRef<Konva.Stage>(null);
