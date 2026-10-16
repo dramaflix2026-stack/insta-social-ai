@@ -2,8 +2,9 @@
 import {useEffect,useRef,useState} from 'react';
 import WorkspaceShell from '@/components/workspace-shell';
 import dynamic from 'next/dynamic';
-import {defaultSlideLayout} from '@/components/carousel-konva-editor';
-import type {SlideLayout} from '@/components/carousel-konva-editor';
+type SlideLayout={role:'cover'|'split-left'|'split-right'|'feature'|'quote'|'checklist'|'cta';title:{x:number;y:number;width:number;fontSize:number};body:{x:number;y:number;width:number;fontSize:number}};
+function defaultSlideLayout(index:number,count:number):SlideLayout{const role=index===0?'cover':index===count-1?'cta':(['split-left','split-right','feature','checklist','quote'] as const)[(index-1)%5];const positions:Record<SlideLayout['role'],[number,number,number,number,number,number]>={cover:[80,275,86,85,770,36],'split-left':[80,250,70,80,610,32],'split-right':[470,245,64,480,620,30],feature:[85,835,65,85,1030,29],quote:[150,420,75,155,820,32],checklist:[80,245,69,90,660,33],cta:[95,430,83,100,820,35]};const a=positions[role];return {role,title:{x:a[0],y:a[1],width:role==='split-left'?560:role==='split-right'?525:860,fontSize:a[2]},body:{x:a[3],y:a[4],width:role==='split-left'?540:role==='split-right'?515:830,fontSize:a[5]}}}
+
 const KonvaEditor=dynamic(()=>import('@/components/carousel-konva-editor'),{ssr:false});
 type TemplateId='bold'|'minimal'|'cinematic'|'luxury'|'pop'|'tech';
 const TEMPLATES:{id:TemplateId;name:string;tagline:string;bg:string;accent:string;fg:string;font:string}[]=[
