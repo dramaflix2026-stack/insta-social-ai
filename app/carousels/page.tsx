@@ -1,12 +1,10 @@
 'use client';
 import {useEffect,useRef,useState} from 'react';
-import {useSearchParams} from 'next/navigation';
 import WorkspaceShell from '@/components/workspace-shell';
 type Brand={id:string;name:string;niche:string;instructions:string};
 type Slide={headline:string;body:string};
 type LocalProject={id:string;name:string;date:string;slides:Slide[];topic:string;caption:string;brandId:string;hashtags?:string[];background?:string;accent?:string;foreground?:string;font?:string};
 export default function Page(){
- const params=useSearchParams();
  const [brands,setBrands]=useState<Brand[]>([]);
  const [brandId,setBrandId]=useState('');
  const [topic,setTopic]=useState('');
@@ -34,7 +32,7 @@ export default function Page(){
  useEffect(()=>{try{const v=window.localStorage.getItem('carousel-draft-v1');if(v){const d=JSON.parse(v);if(Array.isArray(d.slides)){setSlides(d.slides.slice(0,10));setTopic(d.topic||'');setCaption(d.caption||'');setHashtags(d.hashtags||[]);setBackground(d.background||'#151515');setAccent(d.accent||'#facc15');setForeground(d.foreground||'#ffffff');setFont(d.font||'Arial');setBrandId(d.brandId||'')}}}catch{}try{const saved=window.localStorage.getItem('carousel-projects-v1');if(saved)setProjects(JSON.parse(saved))}catch{}setReady(true)},[]);
  useEffect(()=>{if(!ready)return;try{window.localStorage.setItem('carousel-draft-v1',JSON.stringify({slides,topic,caption,brandId,hashtags,background,accent,foreground,font}))}catch{setError('Não foi possível salvar o rascunho neste navegador')}},[ready,slides,topic,caption,brandId,hashtags,background,accent,foreground,font]);
  useEffect(()=>{fetch('/api/instagram/brands').then(r=>r.json()).then(j=>setBrands(j.brands||[])).catch(()=>{})},[]);
- useEffect(()=>{const incoming=params.get('topic');if(incoming){setTopic(incoming.slice(0,350));const id=params.get('brandId');if(id)setBrandId(id)}},[params]);
+ useEffect(()=>{const params=new URLSearchParams(window.location.search);const incoming=params.get('topic');if(incoming){setTopic(incoming.slice(0,350));const id=params.get('brandId');if(id)setBrandId(id)}},[]);
  async function generate(){setBusy(true);setError('');try{const r=await fetch('/api/carousels/generate',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({topic,count,brandId})});const j=await r.json();if(!r.ok)throw Error(j.error||'Falha ao gerar');setSlides(j.slides);setCaption(j.caption);setHashtags(j.hashtags);setActiveCloudId('');setSelected(0)}catch(e){setError(e instanceof Error?e.message:'Erro na geração')}finally{setBusy(false)}}
  function draw(index:number,preview=false){const el=(preview?canvas.current:null)||document.createElement('canvas');el.width=1080;el.height=1350;const maybeCtx=el.getContext('2d');if(!maybeCtx)return el;const ctx:CanvasRenderingContext2D=maybeCtx;const slide=slides[index];if(!slide)return el;ctx.fillStyle=background;ctx.fillRect(0,0,1080,1350);ctx.fillStyle=accent;ctx.fillRect(90,110,110,12);ctx.font='bold 33px Arial';ctx.fillText((brand?.name||'INSTA SOCIAL AI').toUpperCase().slice(0,35),90,205);ctx.fillStyle=foreground;ctx.textBaseline='top';
  function lines(text:string,size:number,max:number){ctx.font='bold '+size+'px '+font;const words=text.split(/\s+/);const result:string[]=[];let line='';for(const word of words){const next=line?line+' '+word:word;if(ctx.measureText(next).width>max&&line){result.push(line);line=word}else line=next}if(line)result.push(line);return result}
