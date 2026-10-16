@@ -1,3 +1,4 @@
+import {NextResponse} from 'next/server';
 import {session,admin} from '@/lib/server';
 import {createHmac,timingSafeEqual} from 'node:crypto';
 export async function GET(req:Request){
@@ -19,8 +20,8 @@ export async function GET(req:Request){
   if(!channels.ok||!channel?.id)throw Error('Não foi encontrado um canal do YouTube nessa conta');
   const {error}=await admin().from('youtube_connections').upsert({user_id:user.id,channel_id:channel.id,channel_title:channel.snippet?.title||'Meu canal',refresh_token:token.refresh_token,updated_at:new Date().toISOString()},{onConflict:'user_id'});
   if(error)throw Error('Não foi possível salvar conexão. Aplique a migration youtube_connections: '+error.message);
-  const res=Response.redirect(base+'?youtube=connected');
+  const res=NextResponse.redirect(base+'?youtube=connected');
   res.headers.append('Set-Cookie','yt_oauth_state=; HttpOnly; Secure; SameSite=Lax; Path=/; Max-Age=0');
   return res;
- }catch(e){return Response.redirect(base+'?youtube_error='+encodeURIComponent(e instanceof Error?e.message:'Erro ao conectar canal'))}
+ }catch(e){return NextResponse.redirect(base+'?youtube_error='+encodeURIComponent(e instanceof Error?e.message:'Erro ao conectar canal'))}
 }
