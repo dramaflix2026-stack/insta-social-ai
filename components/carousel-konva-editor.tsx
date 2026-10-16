@@ -6,7 +6,7 @@ import type Konva from 'konva';
 export type LayoutRole='cover'|'split-left'|'split-right'|'feature'|'quote'|'checklist'|'cta';
 export type TextPlacement={x:number;y:number;width:number;fontSize:number};
 export type SlideLayout={role:LayoutRole;title:TextPlacement;body:TextPlacement};
-type Props={headline:string;body:string;image?:string;background:string;foreground:string;accent:string;font:string;brand:string;index:number;count:number;templateId:string;layout:SlideLayout;onChange:(value:SlideLayout)=>void;registerExport:(index:number,fn:(()=>string)|null)=>void;active:boolean};
+type Props={headline:string;body:string;image?:string;premiumFinal?:boolean;background:string;foreground:string;accent:string;font:string;brand:string;index:number;count:number;templateId:string;layout:SlideLayout;onChange:(value:SlideLayout)=>void;registerExport:(index:number,fn:(()=>string)|null)=>void;active:boolean};
 export function defaultSlideLayout(index:number,count:number):SlideLayout{
 const roles:LayoutRole[]=['cover','split-left','split-right','feature','checklist','quote','cta'];
  const role=index===0?'cover':index===count-1?'cta':roles[1+((index-1)%5)];
@@ -24,7 +24,7 @@ const roles:LayoutRole[]=['cover','split-left','split-right','feature','checklis
 const roles:LayoutRole[]=['cover','split-left','split-right','feature','checklist','quote','cta'];
  function defaultSlideLayoutForRole(role:LayoutRole):SlideLayout{const index=role==='cover'?0:role==='cta'?6:Math.max(1,['split-left','split-right','feature','checklist','quote'].indexOf(role)+1);return defaultSlideLayout(index,7)}
 function readableColor(hex:string){const s=hex.replace('#','');if(s.length!==6)return '#ffffff';const r=parseInt(s.slice(0,2),16),g=parseInt(s.slice(2,4),16),b=parseInt(s.slice(4,6),16);return .2126*r+.7152*g+.0722*b>145?'#1b1b1b':'#ffffff'}
-export default function CarouselKonvaEditor({headline,body,image,background,foreground,accent,font,brand,index,count,templateId,layout,onChange,registerExport,active}:Props){
+export default function CarouselKonvaEditor({headline,body,image,premiumFinal=false,background,foreground,accent,font,brand,index,count,templateId,layout,onChange,registerExport,active}:Props){
  const stage=useRef<Konva.Stage>(null);
  const transformer=useRef<Konva.Transformer>(null);
  const titleRef=useRef<Konva.Text>(null),bodyRef=useRef<Konva.Text>(null);
@@ -78,7 +78,8 @@ export default function CarouselKonvaEditor({headline,body,image,background,fore
    <Layer>
     <Rect width={1080} height={1350} fill={background} listening={false}/>
     {photo&&picture&&<Group clipX={photoRect.x} clipY={photoRect.y} clipWidth={photoRect.w} clipHeight={photoRect.h} listening={false}><KImage image={photo} x={picture.x} y={picture.y} width={picture.w} height={picture.h}/></Group>}
-    <Rect x={photoShade.x} y={photoShade.y} width={photoShade.w} height={photoShade.h} fill={light?'rgba(0,0,0,.10)':'rgba(0,0,0,.21)'} listening={false}/>
+    {!premiumFinal&&<Group listening={false}>
+    <Rect x={photoShade.x} y={photoShade.y} width={photoShade.w} height={photoShade.h} fill={light?'rgba(0,0,0,.10)':'rgba(0,0,0,.21)'} listening={false}/>}
     {textPanel&&<Rect x={textPanel.x} y={textPanel.y} width={textPanel.w} height={textPanel.h} cornerRadius={14} fill={panelFill} listening={false}/>}
     {hasFull&&<Rect width={1080} height={1350} fillLinearGradientStartPoint={{x:0,y:0}} fillLinearGradientEndPoint={{x:930,y:170}} fillLinearGradientColorStops={[0,'rgba(0,0,0,.78)',.6,'rgba(0,0,0,.38)',1,'rgba(0,0,0,.05)']} listening={false}/>}
     {templateId==='tech'&&Array.from({length:7},(_,i)=><Line key={'grid'+i} points={[70+i*160,105,70+i*160,1160]} stroke={accent} opacity={.18} strokeWidth={2} listening={false}/>)}
@@ -115,6 +116,7 @@ export default function CarouselKonvaEditor({headline,body,image,background,fore
     {!growth&&<Rect x={80} y={1190} width={920} height={3} fill={accent} listening={false}/>}
     <Text x={80} y={1227} text={String(index+1).padStart(2,'0')+' / '+String(count).padStart(2,'0')} fontSize={27} fontStyle="bold" fontFamily={font} fill="#ffffff" listening={false}/>
     {!growth&&<Text x={745} y={1229} width={255} align="right" text={index===count-1?'COMPARTILHE':'DESLIZE  →'} fontSize={23} fontFamily={font} fill={hasFull?'#ffffff':ink} listening={false}/>}
+    </Group>}
     <Transformer ref={transformer} rotateEnabled={false} keepRatio={false} enabledAnchors={['middle-left','middle-right','top-left','top-right','bottom-left','bottom-right']} boundBoxFunc={(oldBox,newBox)=>newBox.width<110||newBox.height<25?oldBox:newBox}/>
    </Layer>
   </Stage>
