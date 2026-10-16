@@ -79,7 +79,7 @@ export default function CarouselKonvaEditor({headline,body,image,premiumFinal=fa
     <Rect width={1080} height={1350} fill={background} listening={false}/>
     {photo&&picture&&<Group clipX={photoRect.x} clipY={photoRect.y} clipWidth={photoRect.w} clipHeight={photoRect.h} listening={false}><KImage image={photo} x={picture.x} y={picture.y} width={picture.w} height={picture.h}/></Group>}
     {!premiumFinal&&<Group listening={false}>
-    <Rect x={photoShade.x} y={photoShade.y} width={photoShade.w} height={photoShade.h} fill={light?'rgba(0,0,0,.10)':'rgba(0,0,0,.21)'} listening={false}/>}
+    <Rect x={photoShade.x} y={photoShade.y} width={photoShade.w} height={photoShade.h} fill={light?'rgba(0,0,0,.10)':'rgba(0,0,0,.21)'} listening={false}/>
     {textPanel&&<Rect x={textPanel.x} y={textPanel.y} width={textPanel.w} height={textPanel.h} cornerRadius={14} fill={panelFill} listening={false}/>}
     {hasFull&&<Rect width={1080} height={1350} fillLinearGradientStartPoint={{x:0,y:0}} fillLinearGradientEndPoint={{x:930,y:170}} fillLinearGradientColorStops={[0,'rgba(0,0,0,.78)',.6,'rgba(0,0,0,.38)',1,'rgba(0,0,0,.05)']} listening={false}/>}
     {templateId==='tech'&&Array.from({length:7},(_,i)=><Line key={'grid'+i} points={[70+i*160,105,70+i*160,1160]} stroke={accent} opacity={.18} strokeWidth={2} listening={false}/>)}
