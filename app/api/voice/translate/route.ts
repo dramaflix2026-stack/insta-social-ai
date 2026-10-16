@@ -1,0 +1,9 @@
+import {session,failure} from '@/lib/server';
+export const maxDuration=60;
+export async function POST(req:Request){
+ try{
+  await session();if(!process.env.OPENAI_API_KEY)throw Error('OpenAI não configurada');const form=await req.formData();const file=form.get('file');const target=String(form.get('language')||'pt-BR').slice(0,40);if(!(file instanceof File)||file.size===0||file.size>20*1024*1024)throw Error('Envie um áudio de até 20 MB');const allowed=['audio/mpeg','audio/mp3','audio/mp4','audio/x-m4a','audio/wav','audio/wave','audio/webm','video/mp4'];if(file.type&&!allowed.includes(file.type))throw Error('Formato não suportado');
+  const audio=new FormData();audio.append('file',file,file.name||'audio.mp3');audio.append('model','whisper-1');const t=await fetch('https://api.openai.com/v1/audio/transcriptions',{method:'POST',headers:{Authorization:'Bearer '+process.env.OPENAI_API_KEY},body:audio});const transcript=await t.json();if(!t.ok)throw Error(String(transcript.error?.message||'Falha ao transcrever').slice(0,160));const original=String(transcript.text||'').slice(0,12000);
+  const r=await fetch('https://api.openai.com/v1/chat/completions',{method:'POST',headers:{Authorization:'Bearer '+process.env.OPENAI_API_KEY,'Content-Type':'application/json'},body:JSON.stringify({model:process.env.OPENAI_TEXT_MODEL||'gpt-4o-mini',messages:[{role:'system',content:'Você é tradutor profissional de roteiros para dublagem. Traduza fielmente para o idioma solicitado, preservando sentido, ritmo e naturalidade. Responda somente com o texto traduzido, sem explicações.'},{role:'user',content:JSON.stringify({language:target,text:original})}]})});const j=await r.json();if(!r.ok)throw Error(String(j.error?.message||'Falha na tradução').slice(0,160));return Response.json({original,translated:String(j.choices?.[0]?.message?.content||'').trim()});
+ }catch(e){return failure(e)}
+}
