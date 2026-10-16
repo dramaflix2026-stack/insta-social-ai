@@ -1,0 +1,3 @@
+import {session,admin,failure} from '@/lib/server';
+export async function GET(){try{const {user}=await session();const {data,error}=await admin().from('youtube_connections').select('channel_id,channel_title,updated_at').eq('user_id',user.id).maybeSingle();if(error)throw Error(error.message);return Response.json({connected:!!data,channel:data})}catch(e){return failure(e)}}
+export async function DELETE(){try{const {user}=await session();const {error}=await admin().from('youtube_connections').delete().eq('user_id',user.id);if(error)throw Error(error.message);return Response.json({ok:true})}catch(e){return failure(e)}}
