@@ -1,5 +1,5 @@
 import {session,failure} from '@/lib/server';
-export const maxDuration=60;
+export const maxDuration=300;
 export async function POST(req:Request){
  try{
   await session();
@@ -19,7 +19,10 @@ export async function POST(req:Request){
   const form=new FormData();
   if(valid){const [header,payload]=reference.split(',');const mime=header.slice(5).split(';')[0];const bytes=Buffer.from(payload,'base64');if(bytes.length>4*1024*1024)throw Error('Referência deve ter até 4 MB');form.append('image',new Blob([bytes],{type:mime}),'reference.'+(mime==='image/png'?'png':mime==='image/webp'?'webp':'jpg'));form.append('model',imageModel);form.append('prompt',instruction);form.append('size',size);form.append('quality',b.quality==='high'?'high':'medium');}
   const response=await fetch(valid?'https://api.openai.com/v1/images/edits':'https://api.openai.com/v1/images/generations',{method:'POST',headers:valid?{Authorization:'Bearer '+process.env.OPENAI_API_KEY}:{Authorization:'Bearer '+process.env.OPENAI_API_KEY,'Content-Type':'application/json'},body:valid?form:JSON.stringify({model:imageModel,prompt:instruction,size,quality:b.quality==='high'?'high':'medium',n:1})});
-  const result=await response.json();if(!response.ok)throw Error(String(result.error?.message||'Erro ao gerar imagem').slice(0,220));
+  const responseText=await response.text();
+  let result:{error?:{message?:string};data?:Array<{b64_json?:string}>}={};
+  try{result=JSON.parse(responseText)}catch{throw Error('O serviço de imagens retornou uma resposta inválida (HTTP '+response.status+'). '+(response.status===504||response.status===502?'Possível tempo limite de processamento.':'Tente novamente em instantes.'))}
+  if(!response.ok)throw Error(String(result.error?.message||'Erro ao gerar imagem (HTTP '+response.status+')').slice(0,220));
   if(!result.data?.[0]?.b64_json)throw Error('A API não retornou imagem');
   return Response.json({image:'data:image/png;base64,'+result.data[0].b64_json});
  }catch(e){return failure(e)}
