@@ -24,10 +24,14 @@ export async function POST(req:Request){
     {role:'user',content:JSON.stringify({topic,count,brand,niche,instructions})}
    ]})
   });
-  if(!response.ok)throw Error('Não foi possível gerar o carrossel');
+  if(!response.ok){const detail=await response.json().catch(()=>({}));throw Error(String(detail.error?.message||'Não foi possível gerar o carrossel').slice(0,180))}
   const raw=await response.json();
   const data=JSON.parse(raw.choices?.[0]?.message?.content||'{}');
-  if(!Array.isArray(data.slides)||data.slides.length!==count||data.slides.some((slide:unknown)=>!slide||typeof slide!=='object'||typeof (slide as Record<string,unknown>).headline!=='string'||typeof (slide as Record<string,unknown>).body!=='string'||!(slide as {headline:string}).headline.trim()||!(slide as {body:string}).body.trim()))throw Error('Resposta incompleta da IA. Tente novamente.');
-  return Response.json({slides:data.slides.map((slide:{headline?:unknown;body?:unknown})=>({headline:String(slide.headline||'').slice(0,75),body:String(slide.body||'').slice(0,230)})),caption:String(data.caption||'').slice(0,1200),hashtags:Array.isArray(data.hashtags)?data.hashtags.slice(0,12).map((tag:unknown)=>String(tag).slice(0,40)):[]});
+  const valid=(s:unknown):s is {headline:string;body:string}=>!!s&&typeof s==='object'&&typeof (s as Record<string,unknown>).headline==='string'&&!!String((s as Record<string,unknown>).headline).trim()&&typeof (s as Record<string,unknown>).body==='string';
+  if(!Array.isArray(data.slides))throw Error('A IA não retornou slides válidos. Tente novamente.');
+  const slides=data.slides.filter(valid).slice(0,count).map((s:{headline:string;body:string})=>({headline:s.headline.trim().slice(0,75),body:s.body.trim().slice(0,230)}));
+  if(slides.length===0)throw Error('A IA não retornou conteúdo utilizável. Tente novamente.');
+  while(slides.length<count){const i=slides.length;slides.push({headline:i===count-1?'Próximos passos':'Dica '+i+': coloque em prática',body:i===count-1?'Salve este carrossel e comece a aplicar as dicas ao seu projeto.':'Aplique esta etapa ao seu projeto, valide os resultados e ajuste sua estratégia.'})}
+  return Response.json({slides,caption:String(data.caption||'').slice(0,1200),hashtags:Array.isArray(data.hashtags)?data.hashtags.slice(0,12).map((tag:unknown)=>String(tag).slice(0,40)):[]});
  }catch(error){return failure(error)}
 }
