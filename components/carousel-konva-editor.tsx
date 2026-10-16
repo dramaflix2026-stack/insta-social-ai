@@ -17,7 +17,7 @@ export default function CarouselKonvaEditor({headline,body,image,background,fore
  useEffect(()=>{if(!image){setPhoto(null);return}const img=new window.Image();img.onload=()=>setPhoto(img);img.onerror=()=>setPhoto(null);img.src=image;return()=>{img.onload=null;img.onerror=null}},[image]);
  useEffect(()=>{setPositions({title:{x:82,y:260},body:{x:82,y:710}});setSelected(null)},[index]);
  useEffect(()=>{const node=selected==='title'?title.current:selected==='body'?bodyNode.current:null;if(node&&transform.current){transform.current.nodes([node]);transform.current.getLayer()?.batchDraw()}else transform.current?.nodes([])},[selected,index]);
- useEffect(()=>{onExportReady?.(()=>stage.current?.toDataURL({pixelRatio:1,mimeType:'image/png'})||'')},[onExportReady,headline,body,image,background,foreground,accent,font,brand,index,count,positions]);
+ useEffect(()=>{onExportReady?.(()=>stage.current?.toDataURL({pixelRatio:1/scale,mimeType:'image/png'})||'')},[onExportReady,headline,body,image,background,foreground,accent,font,brand,index,count,positions,scale]);
  const imgScale=photo?Math.max(1080/photo.width,1350/photo.height):1;
  const imgWidth=photo?photo.width*imgScale:0,imgHeight=photo?photo.height*imgScale:0;
  const textBase={fontFamily:font,fill:foreground,wrap:'word' as const,draggable:true};
