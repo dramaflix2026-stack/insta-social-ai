@@ -1,0 +1,33 @@
+name: Instagram publication scheduler
+on:
+  schedule:
+    - cron: '*/5 * * * *'
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: instagram-publication-scheduler
+  cancel-in-progress: false
+jobs:
+  dispatch:
+    runs-on: ubuntu-latest
+    timeout-minutes: 4
+    steps:
+      - name: Trigger authorized publication workers
+        env:
+          APP_URL: ${{ secrets.INSTA_SOCIAL_APP_URL }}
+          CRON_SECRET: ${{ secrets.INSTA_SOCIAL_CRON_SECRET }}
+        run: |
+          set -euo pipefail
+          if [ -z "$APP_URL" ] || [ -z "$CRON_SECRET" ]; then
+            echo "::error::Configure INSTA_SOCIAL_APP_URL and INSTA_SOCIAL_CRON_SECRET repository secrets."
+            exit 1
+          fi
+          APP_URL="${APP_URL%/}"
+          case "$APP_URL" in https://*) ;; *) echo "::error::APP_URL must use HTTPS"; exit 1 ;; esac
+          for route in /api/cron/instagram /api/cron/instagram-autopilot; do
+            curl --fail-with-body --silent --show-error --max-time 110 --retry 1 \
+              --header "Authorization: Bearer $CRON_SECRET" \
+              "$APP_URL$route" >/dev/null
+            echo "Worker $route invoked successfully"
+          done
