@@ -77,7 +77,9 @@ export default function CarouselKonvaEditor({headline,body,image,premiumFinal=fa
   <Stage ref={stage} width={1080*scale} height={1350*scale} scaleX={scale} scaleY={scale} className="overflow-hidden rounded-xl border border-white/10" onMouseDown={e=>{if(e.target===e.target.getStage())setSelected(null)}}>
    <Layer>
     <Rect width={1080} height={1350} fill={background} listening={false}/>
-    {photo&&picture&&<Group clipX={photoRect.x} clipY={photoRect.y} clipWidth={photoRect.w} clipHeight={photoRect.h} listening={false}><KImage image={photo} x={picture.x} y={picture.y} width={picture.w} height={picture.h}/></Group>}
+    {photo&&picture&&<Group clipX={0} clipY={0} clipWidth={1080} clipHeight={1350} listening={false}>
+     {premiumFinal?<><KImage image={photo} x={0} y={0} width={1080} height={1350} opacity={.28} blurRadius={20} filters={[]} /><KImage image={photo} x={(1080-Math.min(1080,1350*photo.width/photo.height))/2} y={(1350-Math.min(1350,1080*photo.height/photo.width))/2} width={Math.min(1080,1350*photo.width/photo.height)} height={Math.min(1350,1080*photo.height/photo.width)}/></>:<KImage image={photo} x={picture.x} y={picture.y} width={picture.w} height={picture.h}/>}
+    </Group>}
     {!premiumFinal&&<Group listening={false}>
     <Rect x={photoShade.x} y={photoShade.y} width={photoShade.w} height={photoShade.h} fill={light?'rgba(0,0,0,.10)':'rgba(0,0,0,.21)'} listening={false}/>
     {textPanel&&<Rect x={textPanel.x} y={textPanel.y} width={textPanel.w} height={textPanel.h} cornerRadius={14} fill={panelFill} listening={false}/>}
