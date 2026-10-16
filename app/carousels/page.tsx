@@ -41,7 +41,8 @@ export default function Page(){
   const el=(preview?canvas.current:null)||document.createElement('canvas');
   if(!el)return document.createElement('canvas');
   el.width=1080;el.height=1350;
-  const g=el.getContext('2d');if(!g)return el;
+  const context=el.getContext('2d');if(!context)return el;
+  const g:CanvasRenderingContext2D=context;
   const slide=slides[index];if(!slide)return el;
   g.fillStyle=background;g.fillRect(0,0,1080,1350);
   if(slide.image){
