@@ -70,7 +70,7 @@ export default function Page(){
   g.font='bold 26px Arial';g.fillStyle='#fff';g.fillText(brandName,safeX,129,maxWidth);
   function wrap(text:string,size:number,weight:string,max:number){
    g.font=weight+' '+size+'px '+font;
-   const words=text.trim().split(/\\s+/).filter(Boolean),lines:string[]=[];
+   const words=text.trim().split(/\s+/).filter(Boolean),lines:string[]=[];
    let line='';
    for(const word of words){
     const candidate=line?line+' '+word:word;
