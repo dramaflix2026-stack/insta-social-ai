@@ -56,6 +56,14 @@ export default function CarouselKonvaEditor({headline,body,image,background,fore
  const hasFull=role==='cover'||role==='cta';
  const textPanel=role==='split-left'?{x:42,y:207,w:605,h:755}:role==='split-right'?{x:434,y:207,w:608,h:755}:role==='feature'?{x:38,y:802,w:1004,h:350}:role==='quote'?{x:72,y:350,w:940,h:570}:role==='checklist'?{x:43,y:205,w:610,h:820}:null;
  const panelFill=light?'rgba(250,247,241,.88)':'rgba(5,9,13,.76)';
+ const growth=templateId==='growth';
+ const heroWords=headline.trim().split(/\\s+/).filter(Boolean);
+ const heroFirst=heroWords[0]||'CRIE';
+ const heroRest=heroWords.slice(1).join(' ')||'MAIS';
+ const numeral=/^\\d+$/.test(heroFirst)?heroFirst:null;
+ const heroSize=numeral?270:Math.max(55,Math.min(104,820/Math.max(5,heroFirst.length)*1.1));
+ const featureLabels=['IDEIAS','ESTRATÉGIA','RESULTADOS','CRESCIMENTO','ESCALA'];
+
  const photoShade=role==='split-right'?{x:370,y:0,w:710,h:1350}:role==='feature'?{x:0,y:740,w:1080,h:610}:{x:0,y:0,w:770,h:1350};
  return <div className={active?'mx-auto max-w-[420px]':'absolute -left-[20000px] top-0 pointer-events-none'} aria-hidden={!active}>
   {active&&<div className="mb-3 space-y-2"><p className="text-center text-xs text-zinc-400">Arraste os textos, selecione para redimensionar. Alterações ficam salvas por slide.</p><div className="flex gap-2 items-center justify-center"><label className="text-xs text-zinc-300" htmlFor={'role-'+index}>Composição</label><select id={'role-'+index} className="rounded-lg bg-zinc-800 p-2 text-xs text-white" value={role} onChange={e=>{const next=defaultSlideLayout(index,count);next.role=e.target.value as LayoutRole;onChange({...defaultSlideLayoutForRole(next.role),role:next.role})}}>{roles.map(r=><option key={r} value={r}>{r}</option>)}</select></div></div>}
@@ -71,7 +79,23 @@ export default function CarouselKonvaEditor({headline,body,image,background,fore
     {templateId==='minimal'&&<Rect x={48} y={55} width={984} height={1220} stroke={foreground} strokeWidth={2} listening={false}/>}
     {templateId==='luxury'&&<Rect x={58} y={61} width={964} height={1210} stroke={accent} strokeWidth={2} listening={false}/>}
     {templateId==='bold'&&<Rect x={0} y={0} width={18} height={1350} fill={accent} listening={false}/>}
-    {role==='quote'&&<Text x={85} y={255} text="“" fontSize={220} fontFamily="Georgia" fill={accent} listening={false}/>}
+    {growth&&<Group listening={false}>
+      <Rect x={0} y={0} width={1080} height={1350} fillLinearGradientStartPoint={{x:0,y:0}} fillLinearGradientEndPoint={{x:900,y:200}} fillLinearGradientColorStops={[0,'rgba(0,0,0,.92)',.55,'rgba(0,0,0,.56)',1,'rgba(0,0,0,.08)']}/>
+      <Rect x={82} y={193} width={112} height={3} fill={accent}/>
+      <Text x={85} y={211} width={815} text="ESTRATÉGIA   •   CRIATIVIDADE   •   CRESCIMENTO" fontFamily={font} fontSize={18} letterSpacing={5} fill="#eeeeee"/>
+      {numeral&&<Text x={65} y={280} text={numeral} fontFamily={font} fontStyle="bold" fontSize={295} fill={accent} shadowColor={accent} shadowBlur={38} shadowOpacity={.5}/>}
+      <Text x={numeral?345:82} y={numeral?363:300} width={numeral?680:900} text={numeral?heroRest.toUpperCase():heroFirst.toUpperCase()} fontFamily={font} fontStyle="bold" fontSize={numeral?94:heroSize} lineHeight={.94} fill="#ffffff" shadowColor="#000" shadowBlur={12}/>
+      {!numeral&&<Text x={84} y={435} width={900} text={heroRest.toUpperCase()} fontFamily={font} fontStyle="bold" fontSize={Math.max(43,Math.min(76,830/Math.max(10,heroRest.length)*2.2))} lineHeight={1.02} fill={accent} shadowColor={accent} shadowBlur={14} shadowOpacity={.35}/>}
+      <Rect x={66} y={1037} width={948} height={130} cornerRadius={20} fill="rgba(12,21,22,.79)" stroke="rgba(255,255,255,.18)" strokeWidth={1}/>
+      {featureLabels.map((label,i)=><Group key={label} x={82+i*187} y={1054}>
+        <Rect width={173} height={99} cornerRadius={13} fill="rgba(255,255,255,.05)"/>
+        <Circle x={86} y={28} radius={11} stroke={accent} strokeWidth={3}/>
+        <Text x={8} y={58} width={157} align="center" text={label} fontFamily={font} fontStyle="bold" fontSize={17} fill="#ffffff"/>
+      </Group>)}
+      <Rect x={716} y={1226} width={305} height={68} cornerRadius={34} stroke={accent} strokeWidth={3} shadowColor={accent} shadowBlur={13} shadowOpacity={.5}/>
+      <Text x={739} y={1249} width={260} align="center" text={index===count-1?'SALVE E COMPARTILHE →':'DESLIZE PARA VER →'} fontFamily={font} fontStyle="bold" fontSize={18} fill="#ffffff"/>
+    </Group>}
+    {!growth&&role==='quote'&&<Text x={85} y={255} text="“" fontSize={220} fontFamily="Georgia" fill={accent} listening={false}/>}
     {role==='checklist'&&[0,1,2].map(i=><Group key={i} listening={false}><Rect x={90} y={930+i*72} width={32} height={32} stroke={accent} strokeWidth={3}/><Line points={[99,945+i*72,106,951+i*72,117,937+i*72]} stroke={accent} strokeWidth={4}/></Group>)}
     {role==='cta'&&<Rect x={78} y={1020} width={410} height={88} cornerRadius={12} fill={accent} listening={false}/>}
     {role==='cta'&&<Text x={99} y={1045} width={370} align="center" text="SALVE ESTE CONTEÚDO  →" fontSize={24} fontStyle="bold" fill={readableColor(accent)} listening={false}/>}
@@ -79,11 +103,11 @@ export default function CarouselKonvaEditor({headline,body,image,background,fore
     <Rect x={0} y={1165} width={1080} height={185} fillLinearGradientStartPoint={{x:0,y:0}} fillLinearGradientEndPoint={{x:0,y:185}} fillLinearGradientColorStops={[0,'rgba(0,0,0,0)',1,'rgba(0,0,0,.84)']} listening={false}/>
     <Rect x={78} y={93} width={95} height={9} fill={accent} listening={false}/>
     <Text x={80} y={140} width={860} text={brand.toUpperCase().slice(0,45)} fontFamily={font} fontSize={27} fontStyle="bold" fill="#ffffff" listening={false}/>
-    <Text ref={titleRef} text={headline} x={layout.title.x} y={layout.title.y} width={layout.title.width} fontSize={titleSize} fontStyle="bold" lineHeight={1.11} fontFamily={font} fill={hasFull?'#ffffff':ink} shadowColor={hasFull?'#000000':'transparent'} shadowBlur={hasFull?9:0} draggable={active} onClick={()=>setSelected('title')} onTap={()=>setSelected('title')} onDragEnd={e=>update('title',{x:e.target.x(),y:e.target.y()})} onTransformEnd={()=>{const n=titleRef.current;if(!n)return;update('title',{x:n.x(),y:n.y(),width:Math.max(160,n.width()*n.scaleX()),fontSize:Math.max(22,n.fontSize()*n.scaleY())});n.scale({x:1,y:1})}}/>
-    <Text ref={bodyRef} text={body} x={layout.body.x} y={bodyY} width={layout.body.width} fontSize={layout.body.fontSize} lineHeight={1.35} fontFamily={font} fill={hasFull?'#ffffff':ink} draggable={active} onClick={()=>setSelected('body')} onTap={()=>setSelected('body')} onDragEnd={e=>update('body',{x:e.target.x(),y:e.target.y()})} onTransformEnd={()=>{const n=bodyRef.current;if(!n)return;update('body',{x:n.x(),y:n.y(),width:Math.max(160,n.width()*n.scaleX()),fontSize:Math.max(18,n.fontSize()*n.scaleY())});n.scale({x:1,y:1})}}/>
-    <Rect x={80} y={1190} width={920} height={3} fill={accent} listening={false}/>
+    {!growth&&<Text ref={titleRef} text={headline} x={layout.title.x} y={layout.title.y} width={layout.title.width} fontSize={titleSize} fontStyle="bold" lineHeight={1.11} fontFamily={font} fill={hasFull?'#ffffff':ink} shadowColor={hasFull?'#000000':'transparent'} shadowBlur={hasFull?9:0} draggable={active} onClick={()=>setSelected('title')} onTap={()=>setSelected('title')} onDragEnd={e=>update('title',{x:e.target.x(),y:e.target.y()})} onTransformEnd={()=>{const n=titleRef.current;if(!n)return;update('title',{x:n.x(),y:n.y(),width:Math.max(160,n.width()*n.scaleX()),fontSize:Math.max(22,n.fontSize()*n.scaleY())});n.scale({x:1,y:1})}}/>}
+    <Text ref={bodyRef} text={body} x={growth?83:layout.body.x} y={growth?805:bodyY} width={growth?750:layout.body.width} fontSize={growth?32:layout.body.fontSize} lineHeight={1.35} fontFamily={font} fill={hasFull?'#ffffff':ink} draggable={active} onClick={()=>setSelected('body')} onTap={()=>setSelected('body')} onDragEnd={e=>update('body',{x:e.target.x(),y:e.target.y()})} onTransformEnd={()=>{const n=bodyRef.current;if(!n)return;update('body',{x:n.x(),y:n.y(),width:Math.max(160,n.width()*n.scaleX()),fontSize:Math.max(18,n.fontSize()*n.scaleY())});n.scale({x:1,y:1})}}/>
+    {!growth&&<Rect x={80} y={1190} width={920} height={3} fill={accent} listening={false}/>}
     <Text x={80} y={1227} text={String(index+1).padStart(2,'0')+' / '+String(count).padStart(2,'0')} fontSize={27} fontStyle="bold" fontFamily={font} fill="#ffffff" listening={false}/>
-    <Text x={745} y={1229} width={255} align="right" text={index===count-1?'COMPARTILHE':'DESLIZE  →'} fontSize={23} fontFamily={font} fill={hasFull?'#ffffff':ink} listening={false}/>
+    {!growth&&<Text x={745} y={1229} width={255} align="right" text={index===count-1?'COMPARTILHE':'DESLIZE  →'} fontSize={23} fontFamily={font} fill={hasFull?'#ffffff':ink} listening={false}/>}
     <Transformer ref={transformer} rotateEnabled={false} keepRatio={false} enabledAnchors={['middle-left','middle-right','top-left','top-right','bottom-left','bottom-right']} boundBoxFunc={(oldBox,newBox)=>newBox.width<110||newBox.height<25?oldBox:newBox}/>
    </Layer>
   </Stage>
