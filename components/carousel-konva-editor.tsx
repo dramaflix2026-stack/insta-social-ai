@@ -46,18 +46,18 @@ export default function CarouselKonvaEditor({headline,body,image,background,fore
  useEffect(()=>{setPhoto(null);if(!image)return;const img=new window.Image();img.onload=()=>setPhoto(img);img.onerror=()=>setPhoto(null);img.src=image;return()=>{img.onload=null;img.onerror=null}},[image]);
  useEffect(()=>{if(!active){setSelected(null);return}const node=selected==='title'?titleRef.current:selected==='body'?bodyRef.current:null;transformer.current?.nodes(node?[node]:[]);transformer.current?.getLayer()?.batchDraw()},[selected,active]);
  const update=(key:'title'|'body',change:Partial<TextPlacement>)=>onChange({...layout,[key]:{...layout[key],...change}});
- const picture=photo?(()=>{const region=photoRect;const cover=Math.max(region.w/photo.width,region.h/photo.height);return {x:region.x+(region.w-photo.width*cover)/2,y:region.y+(region.h-photo.height*cover)/2,w:photo.width*cover,h:photo.height*cover}})():null;
  const darkInk=readableColor(background);
  const ink=light?foreground:'#ffffff';
  const titleSize=Math.min(layout.title.fontSize,Math.max(30,Math.floor(layout.title.width/Math.max(10,headline.length)*3.1)));
  const availableText=titleSize*1.18*Math.ceil(headline.length/Math.max(12,layout.title.width/titleSize*1.8));
  const bodyY=Math.min(1110,layout.body.y<layout.title.y+availableText+35?layout.title.y+availableText+35:layout.body.y);
  const photoRect=role==='split-left'?{x:650,y:180,w:420,h:960}:role==='split-right'?{x:0,y:160,w:465,h:1000}:role==='feature'?{x:0,y:0,w:1080,h:820}:role==='checklist'?{x:580,y:270,w:475,h:760}:role==='quote'?{x:440,y:0,w:640,h:1350}:{x:0,y:0,w:1080,h:1350};
+ const picture=photo?(()=>{const region=photoRect;const cover=Math.max(region.w/photo.width,region.h/photo.height);return {x:region.x+(region.w-photo.width*cover)/2,y:region.y+(region.h-photo.height*cover)/2,w:photo.width*cover,h:photo.height*cover}})():null;
  const hasFull=role==='cover'||role==='cta';
  const textPanel=role==='split-left'?{x:40,y:208,w:590,h:760}:role==='split-right'?{x:452,y:202,w:595,h:760}:role==='feature'?{x:34,y:797,w:1012,h:363}:role==='quote'?{x:82,y:355,w:870,h:595}:role==='checklist'?{x:43,y:205,w:560,h:800}:null;
  const panelFill=light?'rgba(250,247,241,.95)':'rgba(5,9,13,.92)';
  return <div className={active?'mx-auto max-w-[420px]':'absolute -left-[20000px] top-0 pointer-events-none'} aria-hidden={!active}>
-  {active&&<div className="mb-3 space-y-2"><p className="text-center text-xs text-zinc-400">Arraste os textos, selecione para redimensionar. Alterações ficam salvas por slide.</p><div className="flex gap-2 items-center justify-center"><label className="text-xs text-zinc-300" htmlFor={'role-'+index}>Composição</label><select id={'role-'+index} className="rounded-lg bg-zinc-800 p-2 text-xs text-white" value={role} onChange={e=>{const next=defaultSlideLayout(index,count);next.role=e.target.value as LayoutRole;const templates:Record<LayoutRole,SlideLayout> = Object.fromEntries(roles.map(r=>[r,{...next,role:r}])) as Record<LayoutRole,SlideLayout>;onChange({...defaultSlideLayoutForRole(next.role),role:next.role})}}>{roles.map(r=><option key={r} value={r}>{r}</option>)}</select></div></div>}
+  {active&&<div className="mb-3 space-y-2"><p className="text-center text-xs text-zinc-400">Arraste os textos, selecione para redimensionar. Alterações ficam salvas por slide.</p><div className="flex gap-2 items-center justify-center"><label className="text-xs text-zinc-300" htmlFor={'role-'+index}>Composição</label><select id={'role-'+index} className="rounded-lg bg-zinc-800 p-2 text-xs text-white" value={role} onChange={e=>{const next=defaultSlideLayout(index,count);next.role=e.target.value as LayoutRole;onChange({...defaultSlideLayoutForRole(next.role),role:next.role})}}>{roles.map(r=><option key={r} value={r}>{r}</option>)}</select></div></div>}
   <Stage ref={stage} width={1080*scale} height={1350*scale} scaleX={scale} scaleY={scale} className="overflow-hidden rounded-xl border border-white/10" onMouseDown={e=>{if(e.target===e.target.getStage())setSelected(null)}}>
    <Layer>
     <Rect width={1080} height={1350} fill={background} listening={false}/>
