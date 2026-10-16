@@ -20,7 +20,7 @@ export default function YoutubeStudio(){
   const headline=thumbnailHeadline.trim()||suggestThumbnailHeadline(thumbnailPrompt);
   setThumbnailSource(source);setThumbnailVariants(previous=>[source,...previous].slice(0,3));setThumbnailSelected(0);
   setThumbnail(await renderThumbnail(source,headline,thumbnailOptions));
-  setThumbnailQuality(headline.split(/\\s+/).length>6?'Título longo: reduza para até 6 palavras para melhorar a leitura.':'Prévia em 1280 × 720. Confira contraste, margens e leitura no celular antes de publicar.');
+  setThumbnailQuality(headline.split(/\s+/).length>6?'Título longo: reduza para até 6 palavras para melhorar a leitura.':'Prévia em 1280 × 720. Confira contraste, margens e leitura no celular antes de publicar.');
  }catch(e){setError(e instanceof Error?e.message:'Erro ao gerar thumbnail')}finally{setThumbnailBusy(false)}}
  async function copy(value:string,label:string){try{await navigator.clipboard.writeText(value);setCopied(label);setTimeout(()=>setCopied(''),1800)}catch{setError('Não foi possível copiar automaticamente')}}
  async function downloadThumbnail(){if(!thumbnail)return;const img=new Image();img.onload=()=>{const canvas=document.createElement('canvas');canvas.width=1280;canvas.height=720;const ctx=canvas.getContext('2d');if(!ctx)return;const ratio=Math.max(canvas.width/img.width,canvas.height/img.height);const w=img.width*ratio,h=img.height*ratio;ctx.drawImage(img,(1280-w)/2,(720-h)/2,w,h);canvas.toBlob(blob=>{if(!blob)return;const url=URL.createObjectURL(blob);const a=document.createElement('a');a.href=url;a.download='youtube-thumbnail-1280x720.png';a.click();setTimeout(()=>URL.revokeObjectURL(url),1000)},'image/png')};img.src=thumbnail}
