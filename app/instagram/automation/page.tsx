@@ -1,6 +1,7 @@
 'use client';
 import {useEffect,useState} from 'react';
 import Link from 'next/link';
+import WorkspaceShell from '@/components/workspace-shell';
 import {ArrowLeft,Zap,RefreshCw,CalendarClock,CheckCircle2,AlertTriangle,PauseCircle,PlayCircle} from 'lucide-react';
 type Item={id:string;topic:string;scheduled_at:string;status:string;error?:string};
 type Plan={id:string;status:string;created_at:string;social_plan_items:Item[]};
@@ -36,7 +37,7 @@ export default function AutomationCenter(){
  const upcoming=items.filter(i=>['planned','ready','generating','publishing'].includes(i.status)).sort((a,b)=>Date.parse(a.scheduled_at)-Date.parse(b.scheduled_at));
  const published=items.filter(i=>i.status==='published').length;
  const failed=items.filter(i=>i.status==='failed').length;
- return <main className="min-h-screen bg-[#090a0d] px-5 py-10 text-white md:px-12"><div className="mx-auto max-w-6xl">
+ return <WorkspaceShell><main className="min-h-screen bg-[#090a0d] px-5 py-10 text-white md:px-12"><div className="mx-auto max-w-6xl">
   <Link href="/instagram" className="inline-flex items-center gap-2 text-sm text-zinc-400 hover:text-yellow-300"><ArrowLeft size={17}/> Voltar ao Instagram AI</Link>
   <div className="mt-9 flex flex-wrap items-center justify-between gap-4"><div className="flex items-center gap-4"><div className="rounded-2xl bg-yellow-400/10 p-4 text-yellow-400"><Zap size={29}/></div><div><p className="text-xs font-bold uppercase tracking-widest text-yellow-400">Insta Social AI</p><h1 className="text-3xl font-extrabold md:text-5xl">Central de Automação<span className="text-yellow-400">.</span></h1><p className="mt-2 text-sm text-zinc-400">Acompanhe seus planos, próximas publicações e falhas em um só lugar.</p></div></div><button onClick={()=>void refresh()} disabled={loading} className="flex items-center gap-2 rounded-xl border border-white/15 px-4 py-3 text-sm text-zinc-300 hover:border-yellow-400/40"><RefreshCw size={16}/> Atualizar</button></div>
   {notice&&<div role="status" className="mt-6 rounded-xl border border-yellow-400/25 bg-yellow-400/10 p-4 text-sm text-yellow-200">{notice}</div>}
@@ -46,5 +47,5 @@ export default function AutomationCenter(){
   <div className="mt-4 space-y-3">{plans.length===0?<div className="rounded-2xl border border-white/10 bg-[#17181e] p-6 text-sm text-zinc-400">Nenhum plano encontrado. Crie seu primeiro plano no Piloto Automático.</div>:plans.map(p=><div key={p.id} className="flex flex-wrap items-center justify-between gap-4 rounded-2xl border border-white/10 bg-[#17181e] p-5"><div><p className="font-semibold">Plano de {p.social_plan_items?.length||0} posts</p><p className="mt-1 text-xs text-zinc-400">Criado em {new Date(p.created_at).toLocaleDateString('pt-BR')} · Estado: <span className="text-yellow-300">{p.status==='active'?'Ativo':p.status==='paused'?'Pausado':'Rascunho'}</span></p></div><button disabled={working===p.id} onClick={()=>void change(p)} className="inline-flex items-center gap-2 rounded-xl border border-yellow-400/30 bg-yellow-400/10 px-4 py-3 text-sm font-semibold text-yellow-300 disabled:opacity-50">{p.status==='active'?<PauseCircle size={17}/>:<PlayCircle size={17}/>} {working===p.id?'Aguarde...':p.status==='active'?'Pausar plano':'Ativar plano'}</button></div>)}</div>
   <h2 className="mt-9 text-xl font-bold">Próximas publicações</h2><div className="mt-4 overflow-hidden rounded-2xl border border-white/10 bg-[#17181e]">{upcoming.length===0?<p className="p-6 text-sm text-zinc-400">Nenhuma publicação pendente.</p>:upcoming.slice(0,15).map(i=><div key={i.id} className="flex flex-wrap items-center justify-between gap-3 border-b border-white/10 p-4 last:border-0"><div><p className="text-sm font-semibold">{i.topic}</p><p className="mt-1 text-xs text-zinc-400">{new Date(i.scheduled_at).toLocaleString('pt-BR')} · {i.planStatus==='active'?'Plano ativo':'Plano não ativo'}</p></div><span className="rounded-lg bg-white/5 px-3 py-1 text-xs text-zinc-300">{i.status}</span></div>)}</div>
   {failed>0&&<><h2 className="mt-9 text-xl font-bold text-amber-300">Publicações com falha</h2><div className="mt-4 space-y-2">{items.filter(i=>i.status==='failed').slice(0,10).map(i=><div key={i.id} className="rounded-xl border border-amber-400/20 bg-amber-400/5 p-4"><p className="text-sm font-semibold">{i.topic}</p><p className="mt-2 text-xs text-amber-200">{i.error||'Falha sem detalhes. Verifique antes de tentar publicar novamente.'}</p></div>)}</div></>}
- </div></main>;
+ </div></main></WorkspaceShell>;
 }
