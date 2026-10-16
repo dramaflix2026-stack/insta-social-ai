@@ -10,13 +10,16 @@ export async function POST(req:Request){
   const reference=typeof body?.reference==='string'?body.reference:'';
   const hasReference=reference.startsWith('data:image/png;base64,')||reference.startsWith('data:image/jpeg;base64,')||reference.startsWith('data:image/webp;base64,');
   if(reference&&!hasReference)throw Error('Referência inválida. Envie PNG, JPG ou WebP');
+  const headline=String(body?.headline||'').trim().slice(0,65);
   const instruction=[
-   'Crie uma imagem de capa PREMIUM para YouTube, estilo de diretor de arte profissional, hiper-realista quando houver pessoas, acabamento publicitário, iluminação cinematográfica, foco preciso, detalhes nítidos, sem artefatos, sem distorções anatômicas e sem objetos duplicados.',
-   'A composição final será recortada de 1536x1024 para 16:9. Coloque TODO elemento importante dentro da faixa horizontal central, aproximadamente entre 12% e 88% da altura original. Reserve margens internas de pelo menos 10% nas laterais. Nunca posicione rostos, mãos ou elementos relevantes encostados nas bordas.',
-   'Use hierarquia visual forte, sujeito principal bem definido, contraste elegante e fundo organizado. Evite poluição visual, excesso de ícones e elementos financeiros inventados.',
-   'CRÍTICO: NÃO desenhe texto, palavras, números, cifras, logotipos ou caracteres na imagem. Deixe uma área limpa e contrastante para que o título seja aplicado posteriormente com tipografia real, sem letras defeituosas.',
-   hasReference?'A imagem enviada é referência de composição, paleta, iluminação e posicionamento dos elementos. Crie uma imagem NOVA para o tema descrito; não copie textos, logos, números nem pessoas da referência.':'Crie uma composição visual original e adequada ao tema.',
-   'Assunto e direção criativa do usuário: '+prompt
+   'Você é um diretor de arte especializado em thumbnails de YouTube de altíssima conversão. ENTREGUE A ARTE FINAL COMPLETA, com tipografia incorporada à própria imagem, não uma fotografia sem texto.',
+   'Crie composição profissional integrada: tipografia display extrabold em 2 a 4 linhas, com volume, contorno, sombra, cores contrastantes e hierarquia; pessoa ou objeto principal com expressão marcante; elementos de apoio coerentes; iluminação cinematográfica e acabamento de thumbnail de grande canal.',
+   'O TEXTO PRECISA FAZER PARTE DA IMAGEM GERADA, com design gráfico harmonioso, nunca como caixa de texto sobreposta aleatoriamente. Priorize legibilidade no celular.',
+   headline?'O texto principal EXATO a ser escrito, em português, é: "'+headline+'". Não acrescente outras palavras.':'Crie uma chamada curta, impactante, em português, de 2 a 6 palavras sobre o assunto. Texto correto e sem erros ortográficos.',
+   'Composição 16:9: a imagem será recortada da proporção 3:2 para 16:9, portanto mantenha rosto, título e demais elementos principais dentro da faixa central de 75% da altura. Deixe pelo menos 7% de margem em cada lateral. NÃO corte nenhuma letra, rosto ou objeto principal.',
+   'Evite números aleatórios, valores monetários fictícios, telas com texto ilegível, logotipos não solicitados, mãos deformadas, objetos duplicados, excesso de efeitos e poluição visual. Use ícones genéricos em vez de marcas quando não forem indispensáveis.',
+   hasReference?'Use a imagem enviada como referência de direção de arte, estilo de texto, composição, cores e atmosfera. Reinterprete para o NOVO assunto. Não reproduza literalmente textos, valores ou logos da referência.':'Desenvolva uma direção de arte original adequada ao tema.',
+   'Assunto e briefing do usuário: '+prompt
   ].join(' ');
   const form=new FormData();
   if(hasReference){const [header,payload]=reference.split(',');const mime=header.slice(5).split(';')[0];const bytes=Buffer.from(payload,'base64');if(bytes.length>4*1024*1024)throw Error('Imagem de referência deve ter até 4 MB');form.append('image',new Blob([bytes],{type:mime}),mime==='image/png'?'reference.png':mime==='image/webp'?'reference.webp':'reference.jpg');form.append('model',process.env.OPENAI_IMAGE_MODEL||'gpt-image-1-mini');form.append('prompt',instruction);form.append('size','1536x1024');form.append('quality','medium')}
