@@ -8,7 +8,8 @@ export type TextPlacement={x:number;y:number;width:number;fontSize:number};
 export type SlideLayout={role:LayoutRole;title:TextPlacement;body:TextPlacement};
 type Props={headline:string;body:string;image?:string;background:string;foreground:string;accent:string;font:string;brand:string;index:number;count:number;templateId:string;layout:SlideLayout;onChange:(value:SlideLayout)=>void;registerExport:(index:number,fn:(()=>string)|null)=>void;active:boolean};
 export function defaultSlideLayout(index:number,count:number):SlideLayout{
- const roles:LayoutRole[]=['cover','split-left','split-right','feature','checklist','quote','cta'];
+ function defaultSlideLayoutForRole(role:LayoutRole):SlideLayout{const index=role==='cover'?0:role==='cta'?6:Math.max(1,['split-left','split-right','feature','checklist','quote'].indexOf(role)+1);return defaultSlideLayout(index,7)}
+const roles:LayoutRole[]=['cover','split-left','split-right','feature','checklist','quote','cta'];
  const role=index===0?'cover':index===count-1?'cta':roles[1+((index-1)%5)];
  const positions:Record<LayoutRole,[TextPlacement,TextPlacement]>={
  cover:[{x:80,y:275,width:870,fontSize:86},{x:85,y:770,width:830,fontSize:36}],
@@ -45,20 +46,23 @@ export default function CarouselKonvaEditor({headline,body,image,background,fore
  useEffect(()=>{setPhoto(null);if(!image)return;const img=new window.Image();img.onload=()=>setPhoto(img);img.onerror=()=>setPhoto(null);img.src=image;return()=>{img.onload=null;img.onerror=null}},[image]);
  useEffect(()=>{if(!active){setSelected(null);return}const node=selected==='title'?titleRef.current:selected==='body'?bodyRef.current:null;transformer.current?.nodes(node?[node]:[]);transformer.current?.getLayer()?.batchDraw()},[selected,active]);
  const update=(key:'title'|'body',change:Partial<TextPlacement>)=>onChange({...layout,[key]:{...layout[key],...change}});
- const picture=photo?(()=>{const cover=Math.max(1080/photo.width,1350/photo.height);return {x:(1080-photo.width*cover)/2,y:(1350-photo.height*cover)/2,w:photo.width*cover,h:photo.height*cover}})():null;
+ const picture=photo?(()=>{const region=photoRect;const cover=Math.max(region.w/photo.width,region.h/photo.height);return {x:region.x+(region.w-photo.width*cover)/2,y:region.y+(region.h-photo.height*cover)/2,w:photo.width*cover,h:photo.height*cover}})():null;
  const darkInk=readableColor(background);
  const ink=light?foreground:'#ffffff';
- const titleSize=Math.min(layout.title.fontSize,Math.max(34,Math.floor(750/Math.max(1,headline.length)*5.2)));
+ const titleSize=Math.min(layout.title.fontSize,Math.max(30,Math.floor(layout.title.width/Math.max(10,headline.length)*3.1)));
  const availableText=titleSize*1.18*Math.ceil(headline.length/Math.max(12,layout.title.width/titleSize*1.8));
- const bodyY=layout.body.y<layout.title.y+availableText+25?layout.title.y+availableText+25:layout.body.y;
+ const bodyY=Math.min(1110,layout.body.y<layout.title.y+availableText+35?layout.title.y+availableText+35:layout.body.y);
  const photoRect=role==='split-left'?{x:650,y:180,w:420,h:960}:role==='split-right'?{x:0,y:160,w:465,h:1000}:role==='feature'?{x:0,y:0,w:1080,h:820}:role==='checklist'?{x:580,y:270,w:475,h:760}:role==='quote'?{x:440,y:0,w:640,h:1350}:{x:0,y:0,w:1080,h:1350};
- const hasFull=role==='cover'||role==='cta'||templateId==='cinematic';
+ const hasFull=role==='cover'||role==='cta';
+ const textPanel=role==='split-left'?{x:40,y:208,w:590,h:760}:role==='split-right'?{x:452,y:202,w:595,h:760}:role==='feature'?{x:34,y:797,w:1012,h:363}:role==='quote'?{x:82,y:355,w:870,h:595}:role==='checklist'?{x:43,y:205,w:560,h:800}:null;
+ const panelFill=light?'rgba(250,247,241,.95)':'rgba(5,9,13,.92)';
  return <div className={active?'mx-auto max-w-[420px]':'absolute -left-[20000px] top-0 pointer-events-none'} aria-hidden={!active}>
-  {active&&<div className="mb-3 space-y-2"><p className="text-center text-xs text-zinc-400">Arraste os textos, selecione para redimensionar. Alterações ficam salvas por slide.</p><div className="flex gap-2 items-center justify-center"><label className="text-xs text-zinc-300" htmlFor={'role-'+index}>Composição</label><select id={'role-'+index} className="rounded-lg bg-zinc-800 p-2 text-xs text-white" value={role} onChange={e=>{const next=defaultSlideLayout(index,count);next.role=e.target.value as LayoutRole;const templates:Record<LayoutRole,SlideLayout> = Object.fromEntries(roles.map(r=>[r,{...next,role:r}])) as Record<LayoutRole,SlideLayout>;onChange({...templates[next.role],title:{...layout.title},body:{...layout.body}})}}>{roles.map(r=><option key={r} value={r}>{r}</option>)}</select></div></div>}
+  {active&&<div className="mb-3 space-y-2"><p className="text-center text-xs text-zinc-400">Arraste os textos, selecione para redimensionar. Alterações ficam salvas por slide.</p><div className="flex gap-2 items-center justify-center"><label className="text-xs text-zinc-300" htmlFor={'role-'+index}>Composição</label><select id={'role-'+index} className="rounded-lg bg-zinc-800 p-2 text-xs text-white" value={role} onChange={e=>{const next=defaultSlideLayout(index,count);next.role=e.target.value as LayoutRole;const templates:Record<LayoutRole,SlideLayout> = Object.fromEntries(roles.map(r=>[r,{...next,role:r}])) as Record<LayoutRole,SlideLayout>;onChange({...defaultSlideLayoutForRole(next.role),role:next.role})}}>{roles.map(r=><option key={r} value={r}>{r}</option>)}</select></div></div>}
   <Stage ref={stage} width={1080*scale} height={1350*scale} scaleX={scale} scaleY={scale} className="overflow-hidden rounded-xl border border-white/10" onMouseDown={e=>{if(e.target===e.target.getStage())setSelected(null)}}>
    <Layer>
     <Rect width={1080} height={1350} fill={background} listening={false}/>
     {photo&&picture&&<Group clipX={photoRect.x} clipY={photoRect.y} clipWidth={photoRect.w} clipHeight={photoRect.h} listening={false}><KImage image={photo} x={picture.x} y={picture.y} width={picture.w} height={picture.h}/></Group>}
+    {textPanel&&<Rect x={textPanel.x} y={textPanel.y} width={textPanel.w} height={textPanel.h} cornerRadius={14} fill={panelFill} listening={false}/>}
     {hasFull&&<Rect width={1080} height={1350} fillLinearGradientStartPoint={{x:0,y:0}} fillLinearGradientEndPoint={{x:930,y:170}} fillLinearGradientColorStops={[0,'rgba(0,0,0,.78)',.6,'rgba(0,0,0,.38)',1,'rgba(0,0,0,.05)']} listening={false}/>}
     {templateId==='tech'&&Array.from({length:7},(_,i)=><Line key={'grid'+i} points={[70+i*160,105,70+i*160,1160]} stroke={accent} opacity={.18} strokeWidth={2} listening={false}/>)}
     {templateId==='pop'&&<><Circle x={955} y={225} radius={250} fill={accent} opacity={.55} listening={false}/><Circle x={140} y={1100} radius={135} fill={accent} opacity={.25} listening={false}/></>}
@@ -70,7 +74,7 @@ export default function CarouselKonvaEditor({headline,body,image,background,fore
     {role==='cta'&&<Rect x={78} y={1020} width={410} height={88} cornerRadius={12} fill={accent} listening={false}/>}
     {role==='cta'&&<Text x={99} y={1045} width={370} align="center" text="SALVE ESTE CONTEÚDO  →" fontSize={24} fontStyle="bold" fill={readableColor(accent)} listening={false}/>}
     <Rect x={78} y={93} width={95} height={9} fill={accent} listening={false}/>
-    <Text x={80} y={140} width={860} text={brand.toUpperCase().slice(0,45)} fontFamily={font} fontSize={27} fontStyle="bold" fill={hasFull?'#ffffff':darkInk} listening={false}/>
+    <Text x={80} y={140} width={860} text={brand.toUpperCase().slice(0,45)} fontFamily={font} fontSize={27} fontStyle="bold" fill={hasFull?'#ffffff':ink} listening={false}/>
     <Text ref={titleRef} text={headline} x={layout.title.x} y={layout.title.y} width={layout.title.width} fontSize={titleSize} fontStyle="bold" lineHeight={1.11} fontFamily={font} fill={hasFull?'#ffffff':ink} shadowColor={hasFull?'#000000':'transparent'} shadowBlur={hasFull?9:0} draggable={active} onClick={()=>setSelected('title')} onTap={()=>setSelected('title')} onDragEnd={e=>update('title',{x:e.target.x(),y:e.target.y()})} onTransformEnd={()=>{const n=titleRef.current;if(!n)return;update('title',{x:n.x(),y:n.y(),width:Math.max(160,n.width()*n.scaleX()),fontSize:Math.max(22,n.fontSize()*n.scaleY())});n.scale({x:1,y:1})}}/>
     <Text ref={bodyRef} text={body} x={layout.body.x} y={bodyY} width={layout.body.width} fontSize={layout.body.fontSize} lineHeight={1.35} fontFamily={font} fill={hasFull?'#ffffff':ink} draggable={active} onClick={()=>setSelected('body')} onTap={()=>setSelected('body')} onDragEnd={e=>update('body',{x:e.target.x(),y:e.target.y()})} onTransformEnd={()=>{const n=bodyRef.current;if(!n)return;update('body',{x:n.x(),y:n.y(),width:Math.max(160,n.width()*n.scaleX()),fontSize:Math.max(18,n.fontSize()*n.scaleY())});n.scale({x:1,y:1})}}/>
     <Rect x={80} y={1190} width={920} height={3} fill={accent} listening={false}/>
